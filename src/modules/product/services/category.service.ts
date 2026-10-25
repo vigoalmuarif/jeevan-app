@@ -9,13 +9,13 @@ export const categoryService = {
     return data;
   },
 
-  async store(payload: { name: string; description: string }) {
+  async store(payload: { name: string; code: string; description: string }) {
     const { data } = await api.post<{ data: Category }>("/categories", payload);
     return data;
   },
 
   async update(
-    payload: { name: string; description: string; is_active: boolean },
+    payload: { name: string; code: string; description: string; is_active: boolean },
     id: number,
   ) {
     const { data } = await api.patch<{ data: Category }>(

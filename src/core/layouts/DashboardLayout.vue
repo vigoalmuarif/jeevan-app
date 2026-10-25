@@ -192,7 +192,7 @@ onMounted(async () => {
           </Breadcrumb>
         </div>
       </header>
-      <div class="p-4">
+      <div class="w-full min-w-0 p-4">
         <RouterView />
       </div>
     </SidebarInset>

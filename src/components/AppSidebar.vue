@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import type { SidebarProps } from "@/components/ui/sidebar";
-
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
   Frame,
   GalleryVerticalEnd,
   Map,
   PieChart,
-  Settings2,
-  SquareTerminal,
 } from "@lucide/vue";
 import NavMain from "@/components/NavMain.vue";
 import NavProjects from "@/components/NavProjects.vue";

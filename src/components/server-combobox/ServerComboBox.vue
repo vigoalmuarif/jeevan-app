@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TOption extends Record<string, unknown>">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { Check, ChevronsUpDown, Loader2, SearchIcon } from "@lucide/vue";
 import {
   Popover,
@@ -9,9 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -83,7 +81,6 @@ const {
   open: onOpen,
   valueKey,
   labelKey,
-  reset
 } = useServerCombobox(comboboxOptions);
 
 const open = ref(false)
@@ -175,7 +172,11 @@ function handleClear() {
       </Button>
     </PopoverTrigger>
 
-    <PopoverContent class="w-[--radix-popover-trigger-width] max-w-lg p-0" @interact-outside="open = !open">
+    <PopoverContent
+      class="w-[--radix-popover-trigger-width] max-w-[calc(100vw-2rem)] p-0"
+      :collision-padding="8"
+      @interact-outside="open = !open"
+    >
       <Command :filter="() => true" :highlight-on-hover="true">
         <InputGroup>
           <InputGroupInput v-model="query" :placeholder="searchPlaceholder" />
@@ -183,7 +184,7 @@ function handleClear() {
             <SearchIcon class="size-4 shrink-0 opacity-50" />
           </InputGroupAddon>
         </InputGroup>
-        <CommandList class="scroll-auto">
+        <CommandList class="max-h-[min(20rem,45dvh)] overflow-y-auto">
           <!-- Loading state -->
           <div
             v-if="isLoading"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useDataTable } from "@/core/composables/useDataTable";
 import {
   Select,
@@ -20,7 +20,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "@lucide/vue";
+import { Add01Icon, Layers01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/vue";
 import type { DataTableFilterDef } from "@/core/types/data-table.types";
 import { categoryColumns } from "../../config/category-columns.ts";
 import DataTableToolbar from "@/components/data-table/DataTableToolbar.vue";
@@ -102,13 +103,29 @@ const { table, refetch, loading, total, search, clearFilter, clearAllFilters } =
     columns: columnsAlt,
     filters,
   });
+
+const formattedTotal = computed(() => new Intl.NumberFormat("id-ID").format(total.value));
 </script>
 
 <template>
-  <div class="space-y-4">
-    <Button @click="openCreate" v-if="can('product.category.create')"
-      ><Plus /> Kategori Baru
-    </Button>
+  <main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-start gap-3">
+        <div class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <HugeiconsIcon :icon="Layers01Icon" aria-hidden="true" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <h1 class="text-2xl font-semibold tracking-tight">Kategori Produk</h1>
+          <p class="text-sm text-muted-foreground">Atur pengelompokan produk agar katalog lebih terstruktur dan mudah ditelusuri.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 sm:justify-end">
+        <p class="text-sm text-muted-foreground" aria-live="polite"><span class="font-medium text-foreground">{{ formattedTotal }}</span> kategori</p>
+        <Button v-if="can('product.category.create')" @click="openCreate">
+          <HugeiconsIcon :icon="Add01Icon" data-icon="inline-start" /> Kategori Baru
+        </Button>
+      </div>
+    </header>
 
     <DataTableToolbar
       v-model:search="search"
@@ -160,7 +177,7 @@ const { table, refetch, loading, total, search, clearFilter, clearAllFilters } =
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
+  </main>
 
   <FormCategoryPage
     @saved="onSaved"

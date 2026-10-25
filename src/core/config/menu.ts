@@ -5,8 +5,11 @@
 // import { reportMenu }    from '@/modules/report/menu'
 
 import { productMenu } from "@/modules/product/config/product.menu";
+import { purchaseMenu } from "@/modules/purchase/config/purchase.menu";
 import type { MenuNode } from "../types/menu.types";
 import { operationalMenu } from "@/modules/operational/config/operational.menu";
+import { partnerMenu } from "@/modules/partner/config/partner.menu";
+import { inventoryMenu } from "@/modules/inventory/menus/inventory.menu";
 
 /**
  * Composition root seluruh menu aplikasi.
@@ -17,7 +20,7 @@ import { operationalMenu } from "@/modules/operational/config/operational.menu";
  *   Dashboard     → selalu tampil, tanpa gate
  *   Produk        → daftar produk + master produk (kategori, satuan, merek)
  *   Penjualan     → transaksi + retur (module: sales)
- *   Pembelian     → purchase order + retur (module: purchase)
+ *   Pembelian     → penerimaan, purchase order, faktur, dan pembayaran
  *   Inventori     → stok + mutasi (module: inventory)
  *   Pelanggan     → CRM (module: customer)
  *   Operasional   → cabang + gudang (infrastruktur merchant)
@@ -38,12 +41,13 @@ export const appMenu: MenuNode[] = [
 
   // ── Business Modules ─────────────────────────────────────────
   // salesMenu,
-  // purchaseMenu,
-  // inventoryMenu,
+  purchaseMenu,
+  inventoryMenu,
   // customerMenu,
 
   // ── Infrastruktur Merchant ────────────────────────────────────
   operationalMenu,
+  partnerMenu,
 
   // ── Laporan ──────────────────────────────────────────────────
   // reportMenu,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LucideIcon from "@lucide/vue"
+import type { LucideIcon } from "@lucide/vue"
 
 import {
   SidebarGroup,
@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 
-const props = defineProps<{
+defineProps<{
   items: {
     title: string
     url: string

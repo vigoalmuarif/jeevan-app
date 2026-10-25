@@ -50,6 +50,7 @@ const isEdit = computed(() => !!props.selectedCategory);
 
 const initialCategory = {
   name: "",
+  code: "",
   description: "",
   is_active: true,
 };
@@ -60,6 +61,7 @@ watch(open, (val) => {
   if (isEdit.value) {
     category.value = {
       name: props.selectedCategory?.name as string,
+      code: props.selectedCategory?.code as string,
       description: props.selectedCategory?.description as string,
       is_active: props.selectedCategory?.is_active as boolean,
     };
@@ -146,7 +148,7 @@ async function handleSubmit() {
             </div>
           </Field>
           <Field :data-invalid="!!errors.name">
-            <FieldLabel for="name">Nama Satuan</FieldLabel>
+            <FieldLabel for="name">Nama Kategori</FieldLabel>
             <Input
               v-model="category.name"
               id="name"
@@ -157,13 +159,25 @@ async function handleSubmit() {
             />
             <FieldError v-if="!!errors.name">{{ errors.name }}</FieldError>
           </Field>
+          <Field :data-invalid="!!errors.code">
+            <FieldLabel for="code">Kode Kategori</FieldLabel>
+            <Input
+              v-model="category.code"
+              id="code"
+              name="code"
+              placeholder="MINUMAN"
+              autocomplete="off"
+              aria-invalid
+            />
+            <FieldError v-if="!!errors.code">{{ errors.code }}</FieldError>
+          </Field>
           <Field :data-invalid="!!errors.description">
-            <FieldLabel for="description">Kode Satuan</FieldLabel>
+            <FieldLabel for="description">Deskripsi</FieldLabel>
             <Textarea
               v-model="category.description"
               id="description"
               name="description"
-              placeholder="Dalam bentuk botol, sachet, gelas"
+              placeholder="Deskripsi kategori produk"
               autocomplete="off"
               aria-invalid
             />

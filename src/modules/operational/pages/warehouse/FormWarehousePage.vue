@@ -11,11 +11,13 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { warehouseService } from "../../services/warehouse.service";
+import { regionService } from "../../services/region.service";
 import { normalizeError } from "@/lib/errors";
 import type {
   WarehouseInfo,
   WarehousePayload,
 } from "@/core/types/warehouse.types";
+import type { Region } from "@/core/types/region.types";
 import {
   Field,
   FieldContent,
@@ -27,38 +29,15 @@ import {
   FieldSeparator,
   FieldSet,
 } from "@/components/ui/field";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { computed, onMounted, ref } from "vue";
 import { Switch } from "@/components/ui/switch";
-import { watch } from "vue";
 import { Textarea } from "@/components/ui/textarea";
-import type { WilayahKelurahan } from "@/core/types/wilayah.types";
 import { VisuallyHidden } from "reka-ui";
 import { toast } from "vue-sonner";
 import { router } from "@/core/router/route";
 import { useRoute } from "vue-router";
-import Badge from "@/components/ui/badge/Badge.vue";
-import type { BranchCombobox } from "@/core/types/branch.types";
-import { branchService } from "../../services/branch.service";
-import { cn } from "@/lib/utils";
-import { CheckIcon, Loader2, ChevronsUpDown } from "@lucide/vue";
 
 const props = defineProps<{
   selectedWarehouse?: WarehouseInfo;
@@ -69,40 +48,33 @@ const route = useRoute();
 
 const loading = ref(false);
 const loadingFetch = ref(false);
-const loadingFetchBranch = ref(false);
-const branchOpen = ref(false);
 const errors = ref<Record<string, string>>({});
 const generalError = ref("");
+const regions = ref<Region[]>([]);
+const loadingRegions = ref(false);
 const isEdit = computed(() => route.params.id);
-const selectedBranch = ref<BranchCombobox>();
-const branches = ref<BranchCombobox[]>();
 
 const initialWarehouse = {
-  branch_id: undefined,
   code: "",
   name: "",
   phone: "",
   address: "",
   is_active: true,
-  is_main: false,
+  region_ids: [],
 };
 
 const warehouse = ref<WarehousePayload>({ ...initialWarehouse });
 
-const fetchBranches = async () => {
-  loadingFetchBranch.value = true;
+async function fetchRegions() {
+  loadingRegions.value = true;
   try {
-    const res = await branchService.combobox();
-
-    branches.value = res.data;
-  } catch (e) {
-    toast.error("Gagal memuat gudang");
+    regions.value = await regionService.options();
+  } catch (error) {
+    generalError.value = normalizeError(error).message;
   } finally {
-    loadingFetchBranch.value = false;
+    loadingRegions.value = false;
   }
-};
-
-fetchBranches();
+}
 
 function resetForm() {
   warehouse.value = { ...initialWarehouse };
@@ -119,11 +91,9 @@ async function handleSubmit() {
   try {
     if (isEdit.value) {
       await warehouseService.update(warehouse.value, route.params.id as string);
-      isMainIsLabel.value = warehouse.value.is_main;
       toast.success("Gudang berhasil diperbarui 🎉");
     } else {
-      const payload = { ...warehouse.value, ...warehouse.value };
-      await warehouseService.store(payload);
+      await warehouseService.store(warehouse.value);
       router.push({
         name: "operational.warehouses.index",
         query: { isCreated: "true" },
@@ -142,28 +112,18 @@ async function handleSubmit() {
   }
 }
 
-const isMainIsLabel = ref(false);
-
-const handleSelectBranch = (data: BranchCombobox) => {
-  selectedBranch.value = data;
-  warehouse.value.branch_id = selectedBranch.value.id;
-  branchOpen.value = false;
-};
-
 const fetchWarehouse = async () => {
   loadingFetch.value = true;
   try {
     const res = await warehouseService.edit(route.params.id as string);
     warehouse.value = {
-      branch_id: res.data.branch?.id as number,
       name: res.data.name,
       code: res.data.code,
       phone: res.data.phone,
       address: res.data.address,
       is_active: res.data.is_active,
-      is_main: res.data.is_main,
+      region_ids: res.data.region_ids ?? res.data.regions?.map((region) => region.id) ?? [],
     };
-    selectedBranch.value = res.data.branch;
   } catch (e) {
     toast.error("Gagal mengambil data, coba lagi");
   } finally {
@@ -172,6 +132,7 @@ const fetchWarehouse = async () => {
 };
 
 onMounted(async () => {
+  await fetchRegions();
   if (isEdit.value) {
     await fetchWarehouse();
   }
@@ -216,29 +177,6 @@ onMounted(async () => {
                   Nobis ut eos rem.</FieldDescription
                 >
                 <FieldGroup>
-                  <Field orientation="horizontal">
-                    <Badge variant="success" v-if="isMainIsLabel"
-                      >Gudang Utama</Badge
-                    >
-                    <div
-                      class="flex items-center space-x-4"
-                      v-else
-                      v-if="isEdit"
-                    >
-                      <Switch
-                        name="isMain"
-                        id="isMain"
-                        v-model="warehouse.is_main"
-                        key="is_main"
-                      />
-                      <FieldContent>
-                        <FieldLabel for="isMain"
-                          >Jadikan Gudang Utama</FieldLabel
-                        >
-                      </FieldContent>
-                    </div>
-                  </Field>
-
                   <Field orientation="horizontal">
                     <div class="flex items-center space-x-4">
                       <Switch
@@ -292,83 +230,6 @@ onMounted(async () => {
                     </div>
                   </Field>
 
-                     <Field
-                    orientation="responsive"
-                    :data-invalid="!!errors.branch_id"
-                  >
-                    <!-- Hanya 1 combobox yang user interact -->
-                    <FieldLabel for="branch">Cabang</FieldLabel>
-                    <div class="space-y-2">
-                      <Popover v-model:open="branchOpen">
-                        <PopoverTrigger as-child>
-                          <Button
-                            variant="outline"
-                            id="branch"
-                            :aria-expanded="branchOpen"
-                            role="combobox"
-                            class="justify-between font-normal md:min-w-80 lg:min-w-90"
-                            aria-invalid
-                          >
-                            <span class="truncate">
-                              {{ selectedBranch?.name || "Pilih Cabang" }}
-                            </span>
-                            <ChevronsUpDown
-                              class="ml-2 h-4 w-4 shrink-0 opacity-50"
-                            />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent class="min-w-[200px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Cari Cabang..." />
-                            <!-- Loading state -->
-                            <div
-                              v-if="loadingFetchBranch"
-                              class="flex items-center justify-center py-6 text-sm text-muted-foreground"
-                            >
-                              <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                              Memuat...
-                            </div>
-                            <CommandList v-else>
-                              <CommandEmpty>No results found.</CommandEmpty>
-                              <CommandGroup>
-                                <CommandItem
-                                  v-for="branch in branches"
-                                  :value="branch.id"
-                                  :key="branch.id"
-                                  class="hover:bg-muted"
-                                  @select="handleSelectBranch(branch)"
-                                  :data-selected="
-                                    selectedBranch?.id === branch.id
-                                  "
-                                  :data-state="
-                                    selectedBranch?.id === branch.id
-                                      ? 'checked'
-                                      : 'unchecked'
-                                  "
-                                  >{{ branch.name }}
-                                  <CheckIcon
-                                    :class="
-                                      cn(
-                                        'ml-auto',
-                                        selectedBranch?.id === branch.id
-                                          ? 'opacity-100'
-                                          : 'opacity-0',
-                                      )
-                                    "
-                                  />
-                                </CommandItem>
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-
-                      <FieldError v-if="!!errors.branch_id">{{
-                        errors.branch_id
-                      }}</FieldError>
-                    </div>
-                  </Field>
-
                   <Field
                     :data-invalid="!!errors.phone"
                     orientation="responsive"
@@ -409,6 +270,25 @@ onMounted(async () => {
                         errors.address
                       }}</FieldError>
                     </div>
+                  </Field>
+
+                  <Field :data-invalid="!!errors.region_ids">
+                    <FieldLabel>Regional yang dilayani</FieldLabel>
+                    <div v-if="loadingRegions" class="text-sm text-muted-foreground">Memuat regional...</div>
+                    <div v-else-if="regions.length === 0" class="text-sm text-muted-foreground">Belum ada regional aktif. Tambahkan regional terlebih dahulu.</div>
+                    <div v-else class="space-y-2">
+                      <label v-for="region in regions" :key="region.id" class="flex items-center gap-3 rounded-md border p-3">
+                        <input
+                          v-model="warehouse.region_ids"
+                          type="checkbox"
+                          :value="region.id"
+                          :disabled="!region.is_active && !warehouse.region_ids.includes(region.id)"
+                          class="size-4 accent-primary"
+                        />
+                        <span>{{ region.name }} ({{ region.code }})<span v-if="!region.is_active" class="text-muted-foreground"> — Nonaktif</span></span>
+                      </label>
+                    </div>
+                    <FieldError v-if="errors.region_ids">{{ errors.region_ids }}</FieldError>
                   </Field>
                 </FieldGroup>
               </FieldSet>

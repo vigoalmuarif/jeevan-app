@@ -38,7 +38,7 @@ export const regionColumns = (action: regionActions): ColumnDef<Region, any>[] =
       },
     }),
 
-    ...(can("core.region.delete") || can("core.region.update")
+    ...(can("core.regional.delete") || can("core.regional.update")
       ? [
           actionColumn<Region>(DataTableRegionalAction, {
             onDelete: (val) => action.onDelete(val),

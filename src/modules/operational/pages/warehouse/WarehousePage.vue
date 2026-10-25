@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useDataTable } from "@/core/composables/useDataTable";
 import {
   Select,
@@ -18,7 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "@lucide/vue";
+import { Add01Icon, WarehouseIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/vue";
 import type { DataTableFilterDef } from "@/core/types/data-table.types";
 import { warehouseColumns } from "../../config/warehouse-columns.ts";
 import DataTableToolbar from "@/components/data-table/DataTableToolbar.vue";
@@ -133,6 +134,8 @@ const {
   filters,
 });
 
+const formattedTotal = computed(() => new Intl.NumberFormat("id-ID").format(total.value));
+
 const fetchBranches = async () => {
   loadingFetchBranch.value = true;
   try {
@@ -156,15 +159,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div>
-      <RouterLink
-        :to="{ name: 'operational.warehouses.create' }"
-        v-if="can('core.warehouse.create')"
-        as-child
-        ><Button> <Plus /> Gudang Baru </Button>
-      </RouterLink>
-    </div>
+  <main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-start gap-3">
+        <div class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <HugeiconsIcon :icon="WarehouseIcon" aria-hidden="true" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <h1 class="text-2xl font-semibold tracking-tight">Gudang</h1>
+          <p class="text-sm text-muted-foreground">Kelola lokasi penyimpanan stok dan penugasannya ke cabang.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 sm:justify-end">
+        <p class="text-sm text-muted-foreground" aria-live="polite"><span class="font-medium text-foreground">{{ formattedTotal }}</span> gudang</p>
+        <RouterLink
+          v-if="can('core.warehouse.create')"
+          :to="{ name: 'operational.warehouses.create' }"
+          as-child
+        >
+          <Button><HugeiconsIcon :icon="Add01Icon" data-icon="inline-start" /> Gudang Baru</Button>
+        </RouterLink>
+      </div>
+    </header>
 
     <DataTableToolbar
       v-model:search="search"
@@ -226,7 +242,7 @@ onMounted(() => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
+  </main>
 
   <!-- <div class="flex h-svh items-center justify-center">
     <FormWarehousePage

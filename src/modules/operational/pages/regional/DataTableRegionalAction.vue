@@ -37,11 +37,9 @@ const { can } = useCan()
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-      <DropdownMenuItem v-if="can('core.regional.update')" as-child>
-        <RouterLink :to="{ name: 'operational.regions.edit', params: { slug: row.id } }">
+      <DropdownMenuItem v-if="can('core.regional.update')" @click="$emit('edit', row)">
           <HugeiconsIcon :icon="Edit01Icon" />
           Ubah
-        </RouterLink>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem variant="destructive" @click="$emit('delete', row)" v-if="can('core.regional.delete')">

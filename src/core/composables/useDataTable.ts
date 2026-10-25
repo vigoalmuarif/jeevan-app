@@ -64,6 +64,7 @@ export function useDataTable<T>(options: UseDataTableOptions<T>) {
       })
       data.value = response.data
       total.value = response.meta.total
+      failedFetch.value = false
     } catch(e){
       failedFetch.value = true
     } finally {

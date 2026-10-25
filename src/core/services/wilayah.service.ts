@@ -1,5 +1,5 @@
 import api from "../api/axios";
-import type { Wilayah, WilayahAncestors, WilayahKelurahan } from "../types/wilayah.types";
+import type { Wilayah, WilayahAncestors, WilayahKabupaten, WilayahKelurahan } from "../types/wilayah.types";
 import type {
   ComboboxFetcher,
   ComboboxOption,
@@ -8,8 +8,21 @@ import type {
 const wilayahService = {
   // Fetcher khusus search kelurahan dengan context
   searchKelurahan: (async (search, params, options) => {
-    const { data } = await api.get<{ data: WilayahKelurahan[] }>(
+    const { data } = await api.get<{ data: WilayahKabupaten[] }>(
       "/wilayah/search",
+      {
+        params: { search, per_page: 15, ...params },
+        ...options
+      },
+    );
+    return data.data as ComboboxOption[];
+  }) satisfies ComboboxFetcher,
+
+
+    // Fetcher khusus search kabupaten dengan context
+  searchKabupaten: (async (search, params, options) => {
+    const { data } = await api.get<{ data: WilayahKabupaten[] }>(
+      "/wilayah/regency/search",
       {
         params: { search, per_page: 15, ...params },
         ...options

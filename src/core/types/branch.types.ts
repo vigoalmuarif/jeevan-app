@@ -13,12 +13,13 @@ export interface BranchInfo {
   logo: string
   is_main: boolean
   is_active: boolean
+  region_id: number | null
   region: {
-    id: string
+    id: number
     name: string
     code: string
     type: string
-  }
+  } | null
   address: {
     street: string
     postal_code: string
@@ -47,10 +48,9 @@ export interface BranchStorePayload {
   province_code:  string | number
   postal_code:string
   is_active: boolean
-  warehouse_code:  string
-  warehouse_name:  string
-  is_same_address:  boolean
-  warehouse_address: string
+  is_main: boolean
+  region_id: number | null
+  warehouse_ids: number[]
 
 }
 
@@ -67,6 +67,8 @@ export interface BranchPayload {
   postal_code:string
   is_main: boolean
   is_active: boolean
+  region_id: number | null
+  warehouse_ids: number[]
 }
 
 export interface BranchEditResponse {
@@ -77,6 +79,7 @@ export interface BranchEditResponse {
   postal_code:string
   is_main: boolean
   is_active: boolean
+  region_id: number | null
   address: {
     street: string
     postal_code: string
@@ -85,6 +88,7 @@ export interface BranchEditResponse {
     regency: Wilayah
     province: Wilayah
   }
+  warehouses: WarehouseInfo[]
 }
 
 

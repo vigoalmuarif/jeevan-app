@@ -30,3 +30,10 @@ export interface WilayahKelurahan extends ComboboxOption {
   province_code:  string
   province_name:  string
 }
+
+
+export interface WilayahKabupaten extends ComboboxOption {
+  regency_code: string
+  regency_name: string
+}
+

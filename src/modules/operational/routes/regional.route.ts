@@ -12,19 +12,6 @@ export const regionalRoutes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, permission: 'core.regional.view' },
         component: () => import('@/modules/operational/pages/regional/RegionalPage.vue'),
       },
-    //   {
-    //     path: "create",
-    //     name: "operational.regions.create",
-    //     meta: { requiresAuth: true, breadcrumb: 'Tambah Regional', permission: 'core.regional.create' },
-    //     component: () => import('@/modules/operational/pages/regional/FormWarehousePage.vue'),
-    //   },
-    //   {
-    //     path: ":id/edit",
-    //     name: "operational.regions.edit",
-    //     meta: { requiresAuth: true, breadcrumb: 'Ubah Regional', permission: 'core.regional.update' },
-    //     component: () => import('@/modules/operational/pages/regional/FormWarehousePage.vue'),
-    //   },
     ],
   },
 ]
-

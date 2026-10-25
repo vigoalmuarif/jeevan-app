@@ -20,7 +20,8 @@ const { can } = useCan();
 export const categoryColumns = (action: categoryActions): ColumnDef<Category, any>[] => {
   return [
     sortableColumn<Category>("name", "Nama Kategori"),
-    plainColumn<Category>("description", "Deskripsi", (row) => row.description),
+    sortableColumn<Category>("code", "Kode"),
+    plainColumn<Category>("description", "Deskripsi", (row) => row.description || "-"),
 
     plainColumn<Category>("is_active", "Status", (row) => row.is_active, {
       cell: ({ row }) => {

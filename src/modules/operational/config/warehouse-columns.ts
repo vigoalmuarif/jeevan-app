@@ -22,6 +22,9 @@ export const warehouseColumns = (action: warehouseActions): ColumnDef<WarehouseI
     sortableColumn<WarehouseInfo>("code", "Kode Gudang"),
     sortableColumn<WarehouseInfo>("name", "Nama Gudang"),
     plainColumn<WarehouseInfo>("type", "Tipe", (row) => row.type),
+    plainColumn<WarehouseInfo>("regions", "Regional", (row) =>
+      row.regions?.map((region) => region.name).join(", ") || "-",
+    ),
     
     plainColumn<WarehouseInfo>("phone", "Telepon", (row) => row.phone ? row.phone : '-'),
     plainColumn<WarehouseInfo>("address", "Alamat", (row) => row.address ? row.address : '-'),
