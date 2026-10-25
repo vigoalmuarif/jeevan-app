@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 
 const props = defineProps<{
   optional?: boolean
+  required?: boolean
   class?: HTMLAttributes["class"]
 }>()
 </script>
@@ -18,6 +19,6 @@ const props = defineProps<{
       props.class,
     )"
   >
-    <slot /> <span class="inline-flex text-xs text-muted-foreground" v-if="optional">(Opsional)</span>
+    <slot /> <span class="inline-flex text-xs text-muted-foreground" v-if="optional">(Opsional)</span>  <span class="inline-flex text-xs text-destructive" v-if="required">*</span>
   </Label>
 </template>

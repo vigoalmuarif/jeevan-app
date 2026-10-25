@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useDataTable } from "@/core/composables/useDataTable";
 import {
   Select,
@@ -18,7 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "@lucide/vue";
+import { Add01Icon, MapsLocation01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/vue";
 import type { DataTableFilterDef } from "@/core/types/data-table.types";
 import DataTableToolbar from "@/components/data-table/DataTableToolbar.vue";
 import DataTable from "@/components/data-table/DataTable.vue";
@@ -32,6 +33,7 @@ import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { useRoute } from "vue-router";
 import { onMounted } from "vue";
 import { regionColumns } from "../../config/regional-colums.ts";
+import RegionFormDialog from "./RegionFormDialog.vue";
 
 const route = useRoute();
 const { can } = useCan();
@@ -46,14 +48,14 @@ const flashCreated = ref(route.query.isCreated);
 
 const columnsAlt = regionColumns({
   onDelete: (region) => {
-    if (!can("core.region.delete")) {
+    if (!can("core.regional.delete")) {
       return toast.warning("Whops!, kamu gak punya akses buat hapus data 😊");
     }
     selectedRegion.value = region;
     showDeleteDialog.value = true;
   },
   onEdit: (region) => {
-    if (!can("core.region.create"))
+    if (!can("core.regional.update"))
       return toast.warning("Whops!, kamu gak punya akses buat edit data 😊");
     selectedRegion.value = region;
     showFormDialog.value = true;
@@ -70,7 +72,7 @@ const filters: DataTableFilterDef[] = [
 ];
 
 const openCreate = () => {
-  if (!can("core.region.create"))
+  if (!can("core.regional.create"))
     return toast.warning("Whoopps!, kamu gak punya akses buat tambah data 😊");
   selectedRegion.value = undefined;
   showFormDialog.value = true;
@@ -94,7 +96,7 @@ const handleDelete = async () => {
     refetch();
   } catch (err) {
     const error = normalizeError(err);
-    toast.error(`error.message`);
+    toast.error(error.message);
   } finally {
     deleteLoading.value = false;
   }
@@ -107,6 +109,8 @@ const { table, refetch, loading, total, search, clearFilter, clearAllFilters } =
     filters,
   });
 
+const formattedTotal = computed(() => new Intl.NumberFormat("id-ID").format(total.value));
+
 onMounted(() => {
   if(flashCreated.value === 'true'){
     toast.success('Regional berhasil ditambahkan 🎉')
@@ -115,10 +119,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div v-if="can('core.regional.create')">
-      <Button> <Plus /> Regional Baru </Button>
-    </div>
+  <main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-start gap-3">
+        <div class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <HugeiconsIcon :icon="MapsLocation01Icon" aria-hidden="true" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <h1 class="text-2xl font-semibold tracking-tight">Regional</h1>
+          <p class="text-sm text-muted-foreground">Kelola data regional yang digunakan dalam operasional usaha.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 sm:justify-end">
+        <p class="text-sm text-muted-foreground" aria-live="polite"><span class="font-medium text-foreground">{{ formattedTotal }}</span> regional</p>
+        <Button v-if="can('core.regional.create')" @click="openCreate"><HugeiconsIcon :icon="Add01Icon" data-icon="inline-start" /> Regional Baru</Button>
+      </div>
+    </header>
 
     <DataTableToolbar
       v-model:search="search"
@@ -170,13 +186,11 @@ onMounted(() => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
+  </main>
 
-  <!-- <div class="flex h-svh items-center justify-center">
-    <FormRegionPage
+  <RegionFormDialog
       @saved="onSaved"
       v-model:open="showFormDialog"
       :selected-region="selectedRegion"
     />
-  </div> -->
 </template>

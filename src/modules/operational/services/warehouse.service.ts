@@ -1,10 +1,15 @@
 import api from '@/core/api/axios'
 import type { ServerTableResponse } from '@/core/types/data-table.types'
-import type { WarehouseInfo, WarehousePayload } from '@/core/types/warehouse.types'
+import type { WarehouseInfo, WarehouseOption, WarehousePayload } from '@/core/types/warehouse.types'
 
 export const warehouseService = {
   async getData() {
     const { data } = await api.get<ServerTableResponse<WarehouseInfo>>('/warehousees')
+    return data
+  },
+
+  async combobox() {
+    const { data } = await api.get<{ data: WarehouseOption[] }>('/warehouses/simple/combobox')
     return data
   },
 
@@ -24,7 +29,7 @@ export const warehouseService = {
   },
 
   async delete(id: number) {
-    const { data } = await api.delete(`/brands/${id}`)
+    const { data } = await api.delete(`/warehouses/${id}`)
     return data
   },
 

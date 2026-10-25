@@ -11,12 +11,16 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { branchService } from "../../services/branch.service";
+import { warehouseService } from "../../services/warehouse.service";
+import { regionService } from "../../services/region.service";
 import { normalizeError } from "@/lib/errors";
 import type {
   BranchInfo,
   BranchPayload,
   BranchEditResponse,
 } from "@/core/types/branch.types";
+import type { WarehouseOption } from "@/core/types/warehouse.types";
+import type { Region } from "@/core/types/region.types";
 import {
   Field,
   FieldContent,
@@ -36,7 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Spinner from "@/components/ui/spinner/Spinner.vue";
 import { computed, onMounted, ref } from "vue";
@@ -79,19 +82,17 @@ const initialBranch = {
   address: "",
   is_active: true,
   is_main: false,
-};
-
-const initialWarehouse = {
-  warehouse_code: "",
-  warehouse_name: "",
-  is_same_address: false,
-  warehouse_address: "",
+  region_id: null,
+  warehouse_ids: [],
 };
 
 const { selected, fetcher, onKelurahanSelect } = useWilayah();
 
 const branch = ref<BranchPayload>({ ...initialBranch });
-const warehouse = ref({ ...initialWarehouse });
+const warehouses = ref<WarehouseOption[]>([]);
+const regions = ref<Region[]>([]);
+const loadingWarehouses = ref(false);
+const loadingRegions = ref(false);
 
 function resetForm() {
   branch.value = { ...initialBranch };
@@ -100,21 +101,29 @@ function resetForm() {
   generalError.value = "";
 }
 
-const handleWarehouseAddress = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-
-  if (target.value == "false") {
-    return (warehouse.value.warehouse_address = "");
+async function fetchWarehouses() {
+  loadingWarehouses.value = true;
+  try {
+    const response = await warehouseService.combobox();
+    warehouses.value = response.data;
+  } catch (error) {
+    const normalized = normalizeError(error);
+    generalError.value = normalized.message;
+  } finally {
+    loadingWarehouses.value = false;
   }
+}
 
-  if (!branch.value.address) {
-    toast.warning("Alamat cabang belum diisi");
-    warehouse.value.is_same_address = false;
-    return;
+async function fetchRegions() {
+  loadingRegions.value = true;
+  try {
+    regions.value = await regionService.options();
+  } catch (error) {
+    generalError.value = normalizeError(error).message;
+  } finally {
+    loadingRegions.value = false;
   }
-
-  warehouse.value.warehouse_address = branch.value.address;
-};
+}
 
 async function handleSubmit() {
   loading.value = true;
@@ -123,12 +132,11 @@ async function handleSubmit() {
 
   try {
     if (isEdit.value) {
-      await branchService.update(branch.value, route.params.id as string);
+      await branchService.update(branch.value, route.params.slug as string);
       isMainIsLabel.value = branch.value.is_main;
       toast.success("Cabang berhasil diperbarui 🎉");
     } else {
-      const payload = { ...branch.value, ...warehouse.value };
-      await branchService.store(payload);
+      await branchService.store(branch.value);
       router.push({
         name: "operational.branches.index",
         query: { isCreated: "true" },
@@ -189,6 +197,8 @@ const syncBranchResponse = (data: BranchEditResponse) => {
     (branch.value.address = data.address.street),
     (branch.value.is_active = data.is_active),
     (branch.value.is_main = data.is_main),
+    (branch.value.region_id = data.region_id),
+    (branch.value.warehouse_ids = data.warehouses.map((warehouse) => warehouse.id)),
     (selected.value = {
       village_code: data.address.village?.kode,
       village_name: data.address.village?.nama,
@@ -211,6 +221,7 @@ watch(selected, (val) => {
 });
 
 onMounted(async () => {
+  await Promise.all([fetchWarehouses(), fetchRegions()]);
   if (isEdit.value) {
     await fetchBranchById();
   }
@@ -560,123 +571,54 @@ onMounted(async () => {
                 </FieldGroup>
               </FieldSet>
 
-              <FieldSeparator v-if="!isEdit" />
-
-              <FieldSet v-if="!isEdit">
-                <FieldLegend>Gudang</FieldLegend>
-                <FieldDescription
-                  >Lorem, ipsum dolor sit amet consectetur adipisicing elit. Obcaecati facere optio debitis?</FieldDescription
-                >
+              <FieldSeparator />
+              <FieldSet>
+                <FieldLegend>Regional Operasional</FieldLegend>
                 <FieldGroup>
-                  <RadioGroup>
-                    <FieldLabel for="new-warehouse">
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldTitle>Gudang Baru</FieldTitle>
-                          <FieldDescription>
-                            Buat gudang baru
-                          </FieldDescription>
-                        </FieldContent>
-                        <RadioGroupItem
-                          id="new-warehouse"
-                          value="new_warehouse"
-                        />
-                      </Field>
-                    </FieldLabel>
-                    <FieldLabel for="warehouse_exists">
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <FieldTitle>Gudang Sudah Ada</FieldTitle>
-                          <FieldDescription>
-                            Assign gudang yang sudah ada.
-                          </FieldDescription>
-                        </FieldContent>
-                        <RadioGroupItem id="warehouse_exists" value="warehouse_exists" />
-                      </Field>
-                    </FieldLabel>
-                  </RadioGroup>
-                  <Field
-                    :data-invalid="!!errors.warehouse_code"
-                    orientation="responsive"
-                  >
-                    <FieldLabel for="warehouseName">Kode Gudang</FieldLabel>
-                    <div class="space-y-2">
-                      <Input
-                        v-model="warehouse.warehouse_code"
-                        id="warehouseName"
-                        name="warehouse_code"
-                        placeholder="WR-SBY"
-                        autocomplete="off"
-                        class="md:min-w-80 lg:min-w-90"
-                        @input="
-                          warehouse.warehouse_code =
-                            $event.target.value.toUpperCase()
-                        "
-                        aria-invalid
-                      />
-                      <FieldError v-if="!!errors.warehouse_code">{{
-                        errors.warehouse_code
-                      }}</FieldError>
-                    </div>
-                  </Field>
-                  <Field
-                    :data-invalid="!!errors.warehouse_name"
-                    orientation="responsive"
-                  >
-                    <FieldLabel for="warehouseName">Nama Gudang</FieldLabel>
-                    <div class="space-y-2">
-                      <Input
-                        v-model="warehouse.warehouse_name"
-                        id="warehouseName"
-                        name="warehouse_name"
-                        placeholder="Surabaya"
-                        autocomplete="off"
-                        class="md:min-w-80 lg:min-w-90"
-                        aria-invalid
-                      />
-                      <FieldError v-if="!!errors.warehouse_name">{{
-                        errors.warehouse_name
-                      }}</FieldError>
-                    </div>
-                  </Field>
-                  <Field orientation="horizontal">
-                    <div class="flex items-center space-x-4">
-                      <Switch
-                        name="is_same_address"
-                        id="isSameAddress"
-                        v-model="warehouse.is_same_address"
-                        @change="(e: Event) => handleWarehouseAddress(e)"
-                      />
-                      <FieldContent>
-                        <FieldLabel for="isSameAddress"
-                          >Alamat sama dengan cabang</FieldLabel
-                        >
-                      </FieldContent>
-                    </div>
-                  </Field>
-                  <Field
-                    :data-invalid="!!errors.warehouse_address"
-                    orientation="responsive"
-                    v-if="!warehouse.is_same_address"
-                  >
-                    <FieldLabel for="warehouse_address"
-                      >Alamat Gudang</FieldLabel
+                  <Field :data-invalid="!!errors.region_id">
+                    <FieldLabel for="branch-region">Regional cabang</FieldLabel>
+                    <Select
+                      :model-value="branch.region_id === null ? '' : String(branch.region_id)"
+                      @update:model-value="branch.region_id = $event ? Number($event) : null"
                     >
-                    <div class="space-y-2">
-                      <Textarea
-                        v-model="warehouse.warehouse_address"
-                        id="warehouse_address"
-                        name="warehouse_address"
-                        placeholder="Jl. Pahlawan No. 1"
-                        autocomplete="off"
-                        class="md:min-w-80 lg:min-w-90"
-                        aria-invalid
-                      />
-                      <FieldError v-if="!!errors.warehouse_address">{{
-                        errors.warehouse_address
-                      }}</FieldError>
-                    </div>
+                      <SelectTrigger id="branch-region">
+                        <SelectValue :placeholder="loadingRegions ? 'Memuat regional...' : 'Pilih regional'" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="region in regions.filter((item) => item.is_active)" :key="region.id" :value="String(region.id)">
+                          {{ region.name }} ({{ region.code }})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FieldError v-if="errors.region_id">{{ errors.region_id }}</FieldError>
                   </Field>
+                </FieldGroup>
+              </FieldSet>
+              <FieldSeparator />
+              <FieldSet>
+                <FieldLegend>Gudang Cabang</FieldLegend>
+                <FieldDescription>Pilih gudang yang melayani regional cabang. Gudang pertama yang dipilih menjadi gudang utama cabang.</FieldDescription>
+                <FieldGroup>
+                  <div v-if="loadingWarehouses || loadingRegions" class="text-sm text-muted-foreground">Memuat daftar gudang...</div>
+                  <div v-else-if="!branch.region_id" class="text-sm text-muted-foreground">Pilih regional cabang untuk melihat gudang yang sesuai.</div>
+                  <div v-else-if="warehouses.length === 0" class="text-sm text-muted-foreground">Belum ada gudang. Buat gudang terlebih dahulu melalui menu Gudang.</div>
+                  <div v-else class="space-y-2">
+                    <label v-for="warehouse in warehouses" :key="warehouse.id" class="flex items-center gap-3 rounded-md border p-3">
+                      <input
+                        v-model="branch.warehouse_ids"
+                        type="checkbox"
+                        :value="warehouse.id"
+                        :disabled="!warehouse.region_ids.includes(branch.region_id) && !branch.warehouse_ids.includes(warehouse.id)"
+                        class="size-4 accent-primary"
+                      />
+                      <span class="flex flex-col">
+                        <span class="font-medium">{{ warehouse.name }} ({{ warehouse.code }})</span>
+                        <span v-if="!warehouse.region_ids.includes(branch.region_id)" class="text-xs text-destructive">Gudang tidak berada dalam satu regional</span>
+                        <span v-else-if="!warehouse.is_active" class="text-xs text-muted-foreground">Nonaktif</span>
+                      </span>
+                    </label>
+                    <FieldError v-if="errors.warehouse_ids">{{ errors.warehouse_ids }}</FieldError>
+                  </div>
                 </FieldGroup>
               </FieldSet>
             </template>

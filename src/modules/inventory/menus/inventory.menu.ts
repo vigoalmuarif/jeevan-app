@@ -1,14 +1,31 @@
-// modules/inventory/menu.ts
-import type { MenuGroup } from '@/core/types/menu.types'
+import type { MenuNode } from '@/core/types/menu.types'
 
-export const inventoryMenu: MenuGroup = {
+export const inventoryMenu: MenuNode = {
   key: 'inventory',
   label: 'Inventory',
   icon: 'Warehouse',
-  items: [
-    { key: 'inventory.product', label: 'Produk', route: 'inventory.product.index' },
-    { key: 'inventory.purchase', label: 'Pembelian', route: 'inventory.purchase.index' },
-    { key: 'inventory.receiving', label: 'Penerimaan', route: 'inventory.receiving.index' },
-    { key: 'inventory.stock-check', label: 'Cek Stok', route: 'inventory.stock-check.index' },
+  module: 'inventory',
+  children: [
+    {
+      key: 'inventory.warehouse-stocks',
+      label: 'Stok Produk',
+      icon: 'Warehouse',
+      routeName: 'inventory.warehouse-stocks.index',
+      permission: 'inventory.view',
+    },
+    {
+      key: 'inventory.stock-mutations',
+      label: 'Mutasi Stok',
+      icon: 'History',
+      routeName: 'inventory.stock-mutations.index',
+      permission: 'inventory.movement.view',
+    },
+    {
+      key: 'inventory.stock-adjustments',
+      label: 'Stock Adjustment',
+      icon: 'ClipboardCheck',
+      routeName: 'inventory.stok-adjusment.index',
+      permission: 'inventory.adjustment.view',
+    },
   ],
 }

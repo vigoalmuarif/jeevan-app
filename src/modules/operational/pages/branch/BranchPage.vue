@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useDataTable } from "@/core/composables/useDataTable";
 import {
   Select,
@@ -18,7 +18,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "@lucide/vue";
+import { Add01Icon, GitBranchIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/vue";
 import type { DataTableFilterDef } from "@/core/types/data-table.types";
 import { branchColumns } from "../../config/branch-columns.ts";
 import DataTableToolbar from "@/components/data-table/DataTableToolbar.vue";
@@ -107,6 +108,8 @@ const { table, refetch, loading, total, search, clearFilter, clearAllFilters } =
     filters,
   });
 
+const formattedTotal = computed(() => new Intl.NumberFormat("id-ID").format(total.value));
+
 onMounted(() => {
   if(flashCreated.value === 'true'){
     toast.success('Cabang berhasil ditambahkan 🎉')
@@ -115,15 +118,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div>
-      <RouterLink
-        :to="{ name: 'operational.branches.create' }"
-        v-if="can('core.branch.create')"
-        as-child
-        ><Button> <Plus /> Cabang Baru </Button>
-      </RouterLink>
-    </div>
+  <main class="flex flex-col gap-6">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="flex items-start gap-3">
+        <div class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <HugeiconsIcon :icon="GitBranchIcon" aria-hidden="true" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <h1 class="text-2xl font-semibold tracking-tight">Cabang</h1>
+          <p class="text-sm text-muted-foreground">Kelola lokasi operasional dan informasi cabang usaha.</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 sm:justify-end">
+        <p class="text-sm text-muted-foreground" aria-live="polite"><span class="font-medium text-foreground">{{ formattedTotal }}</span> cabang</p>
+        <RouterLink
+          v-if="can('core.branch.create')"
+          :to="{ name: 'operational.branches.create' }"
+          as-child
+        >
+          <Button><HugeiconsIcon :icon="Add01Icon" data-icon="inline-start" /> Cabang Baru</Button>
+        </RouterLink>
+      </div>
+    </header>
 
     <DataTableToolbar
       v-model:search="search"
@@ -175,7 +191,7 @@ onMounted(() => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
+  </main>
 
   <!-- <div class="flex h-svh items-center justify-center">
     <FormBranchPage
