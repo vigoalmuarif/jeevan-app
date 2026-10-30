@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="TOption extends Record<string, unknown>">
 import { computed, ref } from "vue";
-import { Check, ChevronsUpDown, Loader2, SearchIcon } from "@lucide/vue";
+import { ChevronsUpDown, Loader2, SearchIcon } from "@lucide/vue";
 import {
   Popover,
   PopoverContent,
@@ -37,8 +37,10 @@ interface Props {
   searchPlaceholder?: string;
   emptyText?: string;
   disabled?: boolean;
+  ariaInvalid?: boolean;
   debounce?: number;
   perPage?: number;
+  excludeValues?: Array<string | number>;
   /**
    * Jika caller sudah punya object terpilih (edit form),
    * pass di sini supaya label langsung tampil tanpa fetch ulang
@@ -52,8 +54,10 @@ const props = withDefaults(defineProps<Props>(), {
   searchPlaceholder: "Cari...",
   emptyText: "Tidak ada hasil.",
   disabled: false,
+  ariaInvalid: false,
   debounce: 350,
   perPage: 15,
+  excludeValues: () => [],
   initialOption: null,
   params: () => ({}),
 });
@@ -78,6 +82,7 @@ const {
   query,
   options,
   isLoading,
+  error,
   open: onOpen,
   valueKey,
   labelKey,
@@ -85,6 +90,9 @@ const {
 
 const open = ref(false)
 const selected = ref<TOption>()
+const availableOptions = computed(() => options.value.filter(
+  option => !props.excludeValues.some(value => String(value) === String(option[valueKey])),
+))
 
 // ------------------------------------------------------------------ selected label
 /**
@@ -93,7 +101,7 @@ const selected = ref<TOption>()
  * 2. options yang sudah di-fetch
  */
 const selectedLabel = computed<string>(() => {
-  if (!props.modelValue) return "";
+  if (props.modelValue === null || props.modelValue === undefined || props.modelValue === "") return "";
 
   // Cek dari initialOption dulu (edit form)
   if (props.initialOption) {
@@ -105,8 +113,8 @@ const selectedLabel = computed<string>(() => {
   }
 
   // ambil dari yang di select terakhir
-  if(selected.value){
-    return String(selected.value[labelKey])
+  if (selected.value && String(selected.value[valueKey]) === String(props.modelValue)) {
+    return String(selected.value[labelKey] ?? "")
   }
 
   // Cek dari options yang sudah di-fetch
@@ -115,6 +123,11 @@ const selectedLabel = computed<string>(() => {
   );
   return found ? String(found[labelKey] ?? "") : String(props.modelValue);
 });
+
+function handleOpenChange(isOpen: boolean) {
+  open.value = isOpen
+  if (isOpen) onOpen()
+}
 
 // ------------------------------------------------------------------ handlers
 function handleSelect(option: TOption) {
@@ -150,14 +163,14 @@ function handleClear() {
 </script>
 
 <template>
-  <Popover :open="open" @update:open="(isOpen) => isOpen && onOpen()" >
+  <Popover :open="open" @update:open="handleOpenChange">
     <PopoverTrigger as-child>
       <Button
+        type="button"
         variant="outline"
         role="combobox"
         :disabled="disabled"
-        @click="open = !open"
-        aria-invalid
+        :aria-invalid="ariaInvalid || undefined"
         :class="
           cn(
             'w-full justify-between font-normal',
@@ -173,9 +186,10 @@ function handleClear() {
     </PopoverTrigger>
 
     <PopoverContent
-      class="w-[--radix-popover-trigger-width] max-w-[calc(100vw-2rem)] p-0"
+      align="start"
+      class="w-(--reka-popover-trigger-width) min-w-(--reka-popover-trigger-width) max-w-[calc(100vw-2rem)] p-0"
+      :style="{ width: 'var(--reka-popover-trigger-width)' }"
       :collision-padding="8"
-      @interact-outside="open = !open"
     >
       <Command :filter="() => true" :highlight-on-hover="true">
         <InputGroup>
@@ -194,14 +208,21 @@ function handleClear() {
             Memuat...
           </div>
 
+          <div
+            v-else-if="error"
+            class="flex min-h-20 items-center justify-center px-4 text-sm text-destructive"
+          >
+            {{ error }}
+          </div>
+
           <!-- Empty state (hanya tampil jika TIDAK loading) -->
-          <div class="h-20 flex justify-center items-center" v-else-if="!isLoading && options.length === 0">
+          <div class="h-20 flex justify-center items-center" v-else-if="!isLoading && availableOptions.length === 0">
             {{ emptyText }}
           </div>
 
-          <CommandGroup v-if="!isLoading && options.length > 0">
+          <CommandGroup v-if="!isLoading && availableOptions.length > 0">
             <CommandItem
-              v-for="option in options"
+              v-for="option in availableOptions"
               :key="String(option[valueKey])"
               :value="String(option[valueKey])"
               @select="handleSelect(option as TOption)"
@@ -209,16 +230,6 @@ function handleClear() {
             >
               <!-- Default slot: label saja -->
               <slot name="option" :option="option as TOption">
-                <Check
-                  :class="
-                    cn(
-                      'mr-2 h-4 w-4',
-                      String(modelValue) === String(option[valueKey])
-                        ? 'opacity-100'
-                        : 'opacity-0',
-                    )
-                  "
-                />
                 {{ option[labelKey] }}
               </slot>
             </CommandItem>
@@ -228,6 +239,7 @@ function handleClear() {
         <!-- Clear button jika ada value terpilih -->
         <div v-if="modelValue" class="border-t p-1">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             class="w-full text-muted-foreground hover:text-destructive"

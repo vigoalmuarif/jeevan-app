@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { Add01Icon, PackageCheck, Alert02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -25,6 +26,7 @@ import type { GoodsReceipt, GoodsReceiptListItem, GoodsReceiptOptions } from '..
 import GoodsReceiptDetailDialog from './GoodsReceiptDetailDialog.vue'
 import GoodsReceiptFormDialog from './GoodsReceiptFormDialog.vue'
 
+const route = useRoute()
 const { can } = useCan()
 const options = ref<GoodsReceiptOptions>({ suppliers: [], warehouses: [] })
 const optionsLoading = ref(false)
@@ -34,6 +36,7 @@ const supplierFilter = ref<string>()
 const warehouseFilter = ref<string>()
 const selectedReceipt = ref<GoodsReceiptListItem>()
 const selectedDetail = ref<GoodsReceipt>()
+const initialPurchaseOrderId = ref<string>()
 const showForm = ref(false)
 const showDetail = ref(false)
 const showConfirm = ref(false)
@@ -140,7 +143,14 @@ async function onSaved(receipt: GoodsReceipt) {
   await refetch()
 }
 
-onMounted(loadOptions)
+onMounted(async () => {
+  await loadOptions()
+  if (route.query.po_id) {
+    initialPurchaseOrderId.value = String(route.query.po_id)
+    selectedReceipt.value = undefined
+    showForm.value = true
+  }
+})
 </script>
 
 <template>
@@ -178,7 +188,13 @@ onMounted(loadOptions)
     <DataTable :table="table" :loading="loading" empty-text="Belum ada penerimaan barang yang cocok dengan pencarian atau filter ini." />
     <DataTablePagination :table="table" :total="total" />
 
-    <GoodsReceiptFormDialog v-model:open="showForm" :selected-receipt="selectedReceipt" :options="options" @saved="onSaved" />
+    <GoodsReceiptFormDialog
+      v-model:open="showForm"
+      :selected-receipt="selectedReceipt"
+      :options="options"
+      :initial-purchase-order-id="initialPurchaseOrderId"
+      @saved="onSaved"
+    />
     <GoodsReceiptDetailDialog
       v-model:open="showDetail"
       :receipt="selectedDetail"

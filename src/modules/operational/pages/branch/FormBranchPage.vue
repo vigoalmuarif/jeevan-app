@@ -94,6 +94,7 @@ const regions = ref<Region[]>([]);
 const loadingWarehouses = ref(false);
 const loadingRegions = ref(false);
 
+
 function resetForm() {
   branch.value = { ...initialBranch };
   loading.value = false;
@@ -101,18 +102,6 @@ function resetForm() {
   generalError.value = "";
 }
 
-async function fetchWarehouses() {
-  loadingWarehouses.value = true;
-  try {
-    const response = await warehouseService.combobox();
-    warehouses.value = response.data;
-  } catch (error) {
-    const normalized = normalizeError(error);
-    generalError.value = normalized.message;
-  } finally {
-    loadingWarehouses.value = false;
-  }
-}
 
 async function fetchRegions() {
   loadingRegions.value = true;
@@ -198,7 +187,9 @@ const syncBranchResponse = (data: BranchEditResponse) => {
     (branch.value.is_active = data.is_active),
     (branch.value.is_main = data.is_main),
     (branch.value.region_id = data.region_id),
-    (branch.value.warehouse_ids = data.warehouses.map((warehouse) => warehouse.id)),
+    (branch.value.warehouse_ids = data.warehouses.map(
+      (warehouse) => warehouse.id,
+    )),
     (selected.value = {
       village_code: data.address.village?.kode,
       village_name: data.address.village?.nama,
@@ -221,7 +212,7 @@ watch(selected, (val) => {
 });
 
 onMounted(async () => {
-  await Promise.all([fetchWarehouses(), fetchRegions()]);
+  await Promise.all([fetchRegions()]);
   if (isEdit.value) {
     await fetchBranchById();
   }
@@ -578,49 +569,43 @@ onMounted(async () => {
                   <Field :data-invalid="!!errors.region_id">
                     <FieldLabel for="branch-region">Regional cabang</FieldLabel>
                     <Select
-                      :model-value="branch.region_id === null ? '' : String(branch.region_id)"
-                      @update:model-value="branch.region_id = $event ? Number($event) : null"
+                      :model-value="
+                        branch.region_id === null
+                          ? ''
+                          : String(branch.region_id)
+                      "
+                      @update:model-value="
+                        branch.region_id = $event ? Number($event) : null
+                      "
                     >
                       <SelectTrigger id="branch-region">
-                        <SelectValue :placeholder="loadingRegions ? 'Memuat regional...' : 'Pilih regional'" />
+                        <SelectValue
+                          :placeholder="
+                            loadingRegions
+                              ? 'Memuat regional...'
+                              : 'Pilih regional'
+                          "
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem v-for="region in regions.filter((item) => item.is_active)" :key="region.id" :value="String(region.id)">
+                        <SelectItem
+                          v-for="region in regions.filter(
+                            (item) => item.is_active,
+                          )"
+                          :key="region.id"
+                          :value="String(region.id)"
+                        >
                           {{ region.name }} ({{ region.code }})
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <FieldError v-if="errors.region_id">{{ errors.region_id }}</FieldError>
+                    <FieldError v-if="errors.region_id">{{
+                      errors.region_id
+                    }}</FieldError>
                   </Field>
                 </FieldGroup>
               </FieldSet>
-              <FieldSeparator />
-              <FieldSet>
-                <FieldLegend>Gudang Cabang</FieldLegend>
-                <FieldDescription>Pilih gudang yang melayani regional cabang. Gudang pertama yang dipilih menjadi gudang utama cabang.</FieldDescription>
-                <FieldGroup>
-                  <div v-if="loadingWarehouses || loadingRegions" class="text-sm text-muted-foreground">Memuat daftar gudang...</div>
-                  <div v-else-if="!branch.region_id" class="text-sm text-muted-foreground">Pilih regional cabang untuk melihat gudang yang sesuai.</div>
-                  <div v-else-if="warehouses.length === 0" class="text-sm text-muted-foreground">Belum ada gudang. Buat gudang terlebih dahulu melalui menu Gudang.</div>
-                  <div v-else class="space-y-2">
-                    <label v-for="warehouse in warehouses" :key="warehouse.id" class="flex items-center gap-3 rounded-md border p-3">
-                      <input
-                        v-model="branch.warehouse_ids"
-                        type="checkbox"
-                        :value="warehouse.id"
-                        :disabled="!warehouse.region_ids.includes(branch.region_id) && !branch.warehouse_ids.includes(warehouse.id)"
-                        class="size-4 accent-primary"
-                      />
-                      <span class="flex flex-col">
-                        <span class="font-medium">{{ warehouse.name }} ({{ warehouse.code }})</span>
-                        <span v-if="!warehouse.region_ids.includes(branch.region_id)" class="text-xs text-destructive">Gudang tidak berada dalam satu regional</span>
-                        <span v-else-if="!warehouse.is_active" class="text-xs text-muted-foreground">Nonaktif</span>
-                      </span>
-                    </label>
-                    <FieldError v-if="errors.warehouse_ids">{{ errors.warehouse_ids }}</FieldError>
-                  </div>
-                </FieldGroup>
-              </FieldSet>
+             
             </template>
           </FieldGroup>
         </CardContent>

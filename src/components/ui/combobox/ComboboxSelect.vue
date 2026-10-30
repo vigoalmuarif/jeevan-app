@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { Check, ChevronsUpDown } from '@lucide/vue'
+import type { HTMLAttributes } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 
 export interface ComboboxOption { value: string | number; label: string }
-const props = withDefaults(defineProps<{ modelValue: string | number; options: ComboboxOption[]; placeholder?: string; searchPlaceholder?: string; emptyText?: string; disabled?: boolean }>(), {
+const props = withDefaults(defineProps<{
+  modelValue: string | number
+  options: ComboboxOption[]
+  placeholder?: string
+  searchPlaceholder?: string
+  emptyText?: string
+  disabled?: boolean
+  ariaInvalid?: boolean
+  class?: HTMLAttributes['class']
+}>(), {
   placeholder: 'Pilih...', searchPlaceholder: 'Cari pilihan...', emptyText: 'Tidak ada hasil.', disabled: false,
+  ariaInvalid: false,
 })
 const emit = defineEmits<{ 'update:modelValue': [value: string | number] }>()
 const open = ref(false)
@@ -19,9 +31,17 @@ watch(open, (value) => { if (!value) search.value = '' })
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button type="button" variant="outline" role="combobox" :aria-expanded="open" :disabled="disabled" class="w-full justify-between font-normal">
+      <Button
+        type="button"
+        variant="outline"
+        role="combobox"
+        :aria-expanded="open"
+        :aria-invalid="ariaInvalid || undefined"
+        :disabled="disabled"
+        :class="cn('w-full justify-between font-normal', props.class)"
+      >
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">{{ selectedLabel || placeholder }}</span>
-        <ChevronsUpDown class="ml-2 size-4 shrink-0 opacity-50" />
+        <ChevronsUpDown class="size-4 shrink-0 opacity-50" />
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-[--radix-popover-trigger-width] p-0" align="start">

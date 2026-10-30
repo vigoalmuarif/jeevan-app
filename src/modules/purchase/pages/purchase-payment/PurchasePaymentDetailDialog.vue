@@ -31,8 +31,8 @@ const paymentRow = computed<PurchasePaymentListItem | undefined>(() => {
 
 <template>
   <Dialog v-model:open="open">
-    <DialogContent class="grid-cols-[minmax(0,1fr)] max-h-[92dvh] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden overflow-y-auto p-3 sm:w-[calc(100vw-2rem)] sm:max-w-4xl sm:p-4">
-      <DialogHeader>
+    <DialogContent class="!flex h-[94dvh] max-h-[97dvh] w-[calc(100vw-0.5rem)] max-w-[calc(100vw-0.5rem)] flex-col gap-0 overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:max-w-4xl">
+      <DialogHeader class="border-b px-4 py-4 pr-12 sm:px-6 sm:py-5">
         <div class="flex items-center gap-3">
           <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <HugeiconsIcon :icon="CreditCardIcon" aria-hidden="true" />
@@ -44,8 +44,14 @@ const paymentRow = computed<PurchasePaymentListItem | undefined>(() => {
         </div>
       </DialogHeader>
 
+      <div class="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6">
       <template v-if="payment">
-        <div class="grid min-w-0 grid-cols-1 gap-4 rounded-lg border bg-muted/10 p-3 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-4">
+        <section class="overflow-hidden rounded-xl border">
+          <header class="bg-primary/5 px-4 py-3">
+            <h3 class="text-sm font-semibold">Informasi Pembayaran</h3>
+            <p class="text-xs text-muted-foreground">Status, metode, supplier, referensi, dan nominal pembayaran.</p>
+          </header>
+        <div class="grid min-w-0 grid-cols-1 gap-4 border-t bg-muted/10 p-3 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-4">
           <div class="flex min-w-0 items-center gap-3">
             <HugeiconsIcon :icon="payment.status === 'posted' ? CheckmarkCircleIcon : CancelCircleIcon" class="size-6 shrink-0 text-primary" aria-hidden="true" />
             <div><p class="text-xs text-muted-foreground">Status</p><Badge class="mt-1" :variant="payment.status === 'voided' ? 'destructive' : 'default'">{{ payment.status === 'voided' ? 'Dibatalkan' : 'Diposting' }}</Badge></div>
@@ -75,13 +81,17 @@ const paymentRow = computed<PurchasePaymentListItem | undefined>(() => {
             <div><p class="text-xs text-muted-foreground">Catatan</p><p class="whitespace-pre-wrap break-words text-sm">{{ payment.notes }}</p></div>
           </div>
         </div>
+        </section>
 
-        <section class="min-w-0 space-y-3">
-          <div class="flex items-center justify-between gap-3">
-            <h3 class="font-semibold">Alokasi faktur</h3>
+        <section class="overflow-hidden rounded-xl border">
+          <header class="flex flex-wrap items-center justify-between gap-3 bg-primary/5 px-4 py-3">
+            <div>
+              <h3 class="text-sm font-semibold">Alokasi Faktur</h3>
+              <p class="text-xs text-muted-foreground">Daftar faktur yang menerima alokasi pembayaran ini.</p>
+            </div>
             <Badge variant="secondary">{{ payment.allocations.length }} faktur</Badge>
-          </div>
-          <div class="block w-full min-w-0 max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded-lg border">
+          </header>
+          <div class="block w-full min-w-0 max-w-full touch-pan-x overflow-x-auto overscroll-x-contain border-t">
             <table class="w-full min-w-[760px] text-sm">
               <thead class="bg-muted/50 text-left text-muted-foreground">
                 <tr><th class="p-3">No. faktur</th><th class="p-3">No. supplier</th><th class="p-3">Jatuh tempo</th><th class="p-3 text-right">Total faktur</th><th class="p-3 text-right">Dialokasikan</th><th class="p-3">Status kini</th></tr>
@@ -107,8 +117,9 @@ const paymentRow = computed<PurchasePaymentListItem | undefined>(() => {
         <AlertTitle>Pembayaran dibatalkan</AlertTitle>
         <AlertDescription>{{ payment.void_reason || 'Nominal pembayaran telah dikembalikan ke saldo hutang faktur.' }}</AlertDescription>
       </Alert>
+      </div>
 
-      <DialogFooter>
+      <DialogFooter class="mx-0 mb-0 shrink-0 border-t px-4 py-4 sm:px-6">
         <Button v-if="payment?.status === 'posted' && can('purchase.payment.void') && paymentRow" variant="destructive" @click="emit('void', paymentRow)">Batalkan pembayaran</Button>
         <Button variant="outline" @click="open = false">Tutup</Button>
       </DialogFooter>

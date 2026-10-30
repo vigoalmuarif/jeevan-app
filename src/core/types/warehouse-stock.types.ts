@@ -10,6 +10,8 @@ export interface WarehouseStockListItem {
   warehouse_id: number
   warehouse_name: string
   quantity: number | string
+  base_unit_name: string
+  base_unit_code: string
   avg_cost: number | string
   last_mutated_at: string | null
 }

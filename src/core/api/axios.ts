@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? '/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
   withCredentials: true,
   withXSRFToken: true,
   headers: {
@@ -12,7 +12,7 @@ const api = axios.create({
 // Sanctum SPA: ambil CSRF cookie sebelum request yang mengubah state
 export async function ensureCsrfCookie() {
   await axios.get(
-    `${(import.meta.env.VITE_API_URL ?? '').replace('/api', '')}/sanctum/csrf-cookie`,
+    `${(import.meta.env.VITE_API_URL ?? '').replace(/\/api(\/v1)?\/?$/, '')}/sanctum/csrf-cookie`,
     { withCredentials: true }
   )
 }

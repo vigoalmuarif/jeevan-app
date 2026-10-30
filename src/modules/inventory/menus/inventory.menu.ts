@@ -27,5 +27,12 @@ export const inventoryMenu: MenuNode = {
       routeName: 'inventory.stok-adjusment.index',
       permission: 'inventory.adjustment.view',
     },
+    {
+      key: 'inventory.stock-transfers',
+      label: 'Transfer Stok',
+      icon: 'ArrowRightLeft',
+      routeName: 'inventory.stock-transfers.index',
+      permission: 'inventory.transfer.view',
+    },
   ],
 }

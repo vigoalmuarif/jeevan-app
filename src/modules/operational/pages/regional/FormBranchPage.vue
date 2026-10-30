@@ -94,6 +94,14 @@ const regions = ref<Region[]>([]);
 const loadingWarehouses = ref(false);
 const loadingRegions = ref(false);
 
+function warehouseOwnedByAnotherBranch(warehouse: WarehouseOption): boolean {
+  const currentBranchId = props.selectedBranch?.id ?? props.id ?? null;
+
+  return warehouse.owner_branch_id !== null
+    && warehouse.owner_branch_id !== undefined
+    && warehouse.owner_branch_id !== currentBranchId;
+}
+
 function resetForm() {
   branch.value = { ...initialBranch };
   loading.value = false;
@@ -608,12 +616,13 @@ onMounted(async () => {
                         v-model="branch.warehouse_ids"
                         type="checkbox"
                         :value="warehouse.id"
-                        :disabled="!warehouse.region_ids.includes(branch.region_id) && !branch.warehouse_ids.includes(warehouse.id)"
+                        :disabled="warehouseOwnedByAnotherBranch(warehouse) || (!warehouse.region_ids.includes(branch.region_id) && !branch.warehouse_ids.includes(warehouse.id))"
                         class="size-4 accent-primary"
                       />
                       <span class="flex flex-col">
                         <span class="font-medium">{{ warehouse.name }} ({{ warehouse.code }})</span>
-                        <span v-if="!warehouse.region_ids.includes(branch.region_id)" class="text-xs text-destructive">Gudang tidak berada dalam satu regional</span>
+                        <span v-if="warehouseOwnedByAnotherBranch(warehouse)" class="text-xs text-destructive">Sudah dimiliki cabang {{ warehouse.owner_branch_name }}{{ warehouse.owner_branch_code ? ` (${warehouse.owner_branch_code})` : "" }}</span>
+                        <span v-else-if="!warehouse.region_ids.includes(branch.region_id)" class="text-xs text-destructive">Gudang tidak berada dalam satu regional</span>
                         <span v-else-if="!warehouse.is_active" class="text-xs text-muted-foreground">Nonaktif</span>
                       </span>
                     </label>

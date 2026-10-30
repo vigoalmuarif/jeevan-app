@@ -23,6 +23,9 @@ export interface AuthBranch {
   name: string
 }
 
+// AuthSubscription alias
+export type AuthSubscription = AuthSubrcription
+
 export interface AuthSubrcription {
   name: string
   status: string

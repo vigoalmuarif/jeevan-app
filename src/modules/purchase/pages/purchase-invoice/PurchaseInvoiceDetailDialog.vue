@@ -8,6 +8,7 @@ import {
   CreditCardIcon,
   File01Icon,
   PackageCheck,
+  ShoppingBag01Icon,
   Wallet01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/vue'
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useCan } from '@/core/composables/useCan'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { PurchaseInvoice, PurchaseInvoiceListItem } from '../../types/purchase-invoice.types'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -54,8 +56,8 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
 
 <template>
   <Dialog v-model:open="open">
-    <DialogContent class="grid-cols-[minmax(0,1fr)] max-h-[92dvh] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] min-w-0 overflow-x-hidden overflow-y-auto p-3 sm:w-[calc(100vw-2rem)] sm:max-w-6xl sm:p-4">
-      <DialogHeader>
+    <DialogContent class="!flex h-[94dvh] max-h-[97dvh] w-[calc(100vw-0.5rem)] max-w-[calc(100vw-0.5rem)] flex-col gap-0 overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:max-w-6xl">
+      <DialogHeader class="border-b px-4 py-4 pr-12 sm:px-6 sm:py-5">
         <div class="flex items-center gap-3">
           <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <HugeiconsIcon :icon="File01Icon" aria-hidden="true" />
@@ -67,8 +69,20 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
         </div>
       </DialogHeader>
 
+      <div class="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden px-4 py-5 sm:px-6">
+      <Alert v-if="invoice?.status === 'voided'" variant="destructive">
+        <HugeiconsIcon :icon="CancelCircleIcon" aria-hidden="true" />
+        <AlertTitle>Faktur dibatalkan</AlertTitle>
+        <AlertDescription>Faktur yang dibatalkan tidak lagi membentuk hutang dan penerimaannya dapat difakturkan kembali.</AlertDescription>
+      </Alert>
+
       <template v-if="invoice">
-        <div class="grid min-w-0 grid-cols-1 gap-x-4 gap-y-4 rounded-lg border bg-muted/10 p-3 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-4 lg:grid-cols-4">
+        <section class="overflow-hidden rounded-xl border">
+          <header class="bg-primary/5 px-4 py-3">
+            <h3 class="text-sm font-semibold">Informasi Faktur</h3>
+            <p class="text-xs text-muted-foreground">Status, supplier, jadwal, dan informasi penerimaan faktur.</p>
+          </header>
+        <div class="grid min-w-0 grid-cols-1 gap-x-4 gap-y-4 border-t bg-muted/10 p-3 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-4 lg:grid-cols-4">
           <div class="flex min-w-0 items-center gap-3">
             <HugeiconsIcon :icon="statusIcon" class="size-6 shrink-0 text-primary" aria-hidden="true" />
             <div class="min-w-0">
@@ -141,7 +155,75 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
             </div>
           </div>
         </div>
+        </section>
 
+        <Tabs default-value="summary" class="w-full min-w-0">
+          <TabsList variant="line" class="grid h-auto w-full grid-cols-2 rounded-none border-b sm:flex sm:w-fit">
+            <TabsTrigger value="summary" class="min-w-0">
+              <HugeiconsIcon :icon="File01Icon" data-icon="inline-start" aria-hidden="true" />
+              Ringkasan
+            </TabsTrigger>
+            <TabsTrigger value="items" class="min-w-0">
+              <HugeiconsIcon :icon="ShoppingBag01Icon" data-icon="inline-start" aria-hidden="true" />
+              Item Faktur
+            </TabsTrigger>
+            <TabsTrigger value="receipts" class="min-w-0">
+              <HugeiconsIcon :icon="PackageCheck" data-icon="inline-start" aria-hidden="true" />
+              Penerimaan
+            </TabsTrigger>
+            <TabsTrigger value="payments" class="min-w-0">
+              <HugeiconsIcon :icon="CreditCardIcon" data-icon="inline-start" aria-hidden="true" />
+              Pembayaran
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="summary" class="mt-4 min-w-0 space-y-4">
+            <div>
+              <h3 class="text-sm font-semibold">Ringkasan Tagihan</h3>
+              <p class="text-xs text-muted-foreground">
+                Ikhtisar nilai faktur dan posisi pembayaran saat ini.
+              </p>
+            </div>
+
+            <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
+              <div class="rounded-lg border bg-muted/20 p-4">
+                <p class="text-xs text-muted-foreground">Total Faktur</p>
+                <p class="mt-1 text-lg font-semibold text-foreground">
+                  {{ currencyFormat.format(Number(invoice.grand_total)) }}
+                </p>
+              </div>
+              <div class="rounded-lg border bg-muted/20 p-4">
+                <p class="text-xs text-muted-foreground">Sudah Dibayar</p>
+                <p class="mt-1 text-lg font-semibold text-primary">
+                  {{ currencyFormat.format(Number(invoice.paid_amount)) }}
+                </p>
+              </div>
+              <div class="rounded-lg border bg-primary/5 p-4">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-xs text-muted-foreground">Sisa Hutang</p>
+                  <Badge v-if="invoice.is_overdue" variant="destructive">Terlambat</Badge>
+                </div>
+                <p class="mt-1 text-lg font-semibold text-primary">
+                  {{ currencyFormat.format(Number(invoice.balance_amount)) }}
+                </p>
+              </div>
+            </div>
+
+            <section class="overflow-hidden rounded-xl border">
+              <header class="bg-primary/5 px-4 py-3">
+                <h4 class="text-sm font-semibold">Rincian Nilai Faktur</h4>
+              </header>
+              <div class="grid gap-2 p-4 text-sm">
+                <div class="flex justify-between gap-4"><span class="text-muted-foreground">Subtotal</span><span>{{ currencyFormat.format(Number(invoice.items_subtotal)) }}</span></div>
+                <div class="flex justify-between gap-4"><span class="text-muted-foreground">Diskon</span><span>-{{ currencyFormat.format(Number(invoice.discount_amount)) }}</span></div>
+                <div class="flex justify-between gap-4"><span class="text-muted-foreground">Pajak</span><span>{{ currencyFormat.format(Number(invoice.tax_amount)) }}</span></div>
+                <div class="flex justify-between gap-4"><span class="text-muted-foreground">Pembulatan</span><span>{{ currencyFormat.format(Number(invoice.rounding_amount)) }}</span></div>
+                <div class="flex justify-between gap-4 border-t pt-2 font-semibold"><span>Total Faktur</span><span>{{ currencyFormat.format(Number(invoice.grand_total)) }}</span></div>
+              </div>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="receipts" class="mt-4 min-w-0">
         <section class="min-w-0 space-y-3">
           <div class="flex items-center justify-between gap-3">
             <h3 class="font-semibold">Penerimaan yang ditagihkan</h3>
@@ -163,7 +245,9 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
             </table>
           </div>
         </section>
+          </TabsContent>
 
+          <TabsContent value="items" class="mt-4 min-w-0">
         <section class="min-w-0 space-y-3">
           <h3 class="font-semibold">Rincian item faktur</h3>
           <div class="block w-full min-w-0 max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded-lg border">
@@ -189,7 +273,9 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
             </table>
           </div>
         </section>
+          </TabsContent>
 
+          <TabsContent value="payments" class="mt-4 min-w-0">
         <section class="min-w-0 space-y-3">
           <div class="flex items-center gap-2">
             <HugeiconsIcon :icon="Wallet01Icon" class="size-5 text-primary" aria-hidden="true" />
@@ -216,25 +302,13 @@ const invoiceRow = computed<PurchaseInvoiceListItem | undefined>(() => {
             </table>
           </div>
         </section>
-
-        <section class="ml-auto grid w-full min-w-0 max-w-md gap-2 rounded-lg border p-4 text-sm">
-          <div class="flex justify-between"><span class="text-muted-foreground">Subtotal</span><span>{{ currencyFormat.format(Number(invoice.items_subtotal)) }}</span></div>
-          <div class="flex justify-between"><span class="text-muted-foreground">Diskon</span><span>-{{ currencyFormat.format(Number(invoice.discount_amount)) }}</span></div>
-          <div class="flex justify-between"><span class="text-muted-foreground">Pajak</span><span>{{ currencyFormat.format(Number(invoice.tax_amount)) }}</span></div>
-          <div class="flex justify-between"><span class="text-muted-foreground">Pembulatan</span><span>{{ currencyFormat.format(Number(invoice.rounding_amount)) }}</span></div>
-          <div class="flex justify-between border-t pt-2 font-semibold"><span>Total faktur</span><span>{{ currencyFormat.format(Number(invoice.grand_total)) }}</span></div>
-          <div class="flex justify-between"><span class="text-muted-foreground">Dibayar</span><span>{{ currencyFormat.format(Number(invoice.paid_amount)) }}</span></div>
-          <div class="flex justify-between font-semibold"><span>Sisa hutang</span><span>{{ currencyFormat.format(Number(invoice.balance_amount)) }}</span></div>
-        </section>
+          </TabsContent>
+        </Tabs>
       </template>
 
-      <Alert v-if="invoice?.status === 'voided'" variant="destructive">
-        <HugeiconsIcon :icon="CancelCircleIcon" aria-hidden="true" />
-        <AlertTitle>Faktur dibatalkan</AlertTitle>
-        <AlertDescription>Faktur yang dibatalkan tidak lagi membentuk hutang dan penerimaannya dapat difakturkan kembali.</AlertDescription>
-      </Alert>
+      </div>
 
-      <DialogFooter>
+      <DialogFooter class="mx-0 mb-0 shrink-0 border-t px-4 py-4 sm:px-6">
         <Button v-if="invoice?.status === 'posted' && Number(invoice.balance_amount) > 0 && can('purchase.payment.create') && invoiceRow" variant="secondary" @click="emit('pay', invoiceRow)">Bayar faktur</Button>
         <Button v-if="invoice?.status === 'draft' && can('purchase.invoice.post') && invoiceRow" @click="emit('post', invoiceRow)">Posting faktur</Button>
         <Button v-if="invoice?.status === 'posted' && can('purchase.invoice.void') && invoiceRow" variant="destructive" @click="emit('void', invoiceRow)">Batalkan (void)</Button>

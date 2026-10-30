@@ -43,29 +43,26 @@ export function useServerCombobox(options: UseServerComboboxOptions) {
   let abortController: AbortController | null = null;
 
   async function fetchOptions(search: string) {
-      
-      if (abortController) {
-          abortController.abort();
-        }
-        
-    abortController = new AbortController();
-    
+    abortController?.abort();
+    const controller = new AbortController();
+    abortController = controller;
+
     isLoading.value = true;
     error.value = null;
-    // options_.value = [];
 
     try {
-      const response = await fetcher(search, params, {
-        signal: abortController.signal
-      });
-      
-      // Support both paginated { data: [] } and plain array []
+      const response = await fetcher(search, params, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+
       options_.value = Array.isArray(response) ? response : (response ?? []);
-      isLoading.value = false;
-    } catch (err: any) {
-      error.value = "Gagal memuat data.";
-    //   options_.value = [];
-    } 
+    } catch {
+      if (!controller.signal.aborted) {
+        error.value = "Gagal memuat data.";
+        options_.value = [];
+      }
+    } finally {
+      if (abortController === controller) isLoading.value = false;
+    }
   }
 
   const debouncedFetch = useDebounceFn((search: string) => {

@@ -41,4 +41,15 @@ export const inventoryRoutes: RouteRecordRaw[] = [
       },
     ],
   },
+  {
+    path: '/inventory/stock-transfers',
+    name: 'inventory.stock-transfers',
+    meta: { requiresAuth: true, breadcrumb: 'Transfer Stok' },
+    children: [{
+      path: '',
+      name: 'inventory.stock-transfers.index',
+      meta: { requiresAuth: true, permission: 'inventory.transfer.view' },
+      component: () => import('@/modules/inventory/pages/stock-transfer/StockTransferPage.vue'),
+    }],
+  },
 ]

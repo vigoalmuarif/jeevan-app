@@ -44,4 +44,7 @@ export interface WarehouseOption {
   code: string
   is_active: boolean
   region_ids: number[]
+  owner_branch_id?: number | null
+  owner_branch_name?: string | null
+  owner_branch_code?: string | null
 }

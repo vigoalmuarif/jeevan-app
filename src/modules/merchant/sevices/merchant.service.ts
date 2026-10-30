@@ -31,4 +31,9 @@ export const merchantService = {
     const { data } = await api.get<{ data: IndustryPackage[] }>('/industry-packages')
     return data.data
   },
+
+  async getContext(merchant: string | number) {
+    const { data } = await api.get<{ data: any }>(`/merchants/${merchant}/context`)
+    return data.data
+  },
 }

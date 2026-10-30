@@ -39,6 +39,11 @@ export interface GoodsReceiptItem {
 
 export interface GoodsReceipt extends GoodsReceiptListItem {
   purchase_order_id: number | null
+  purchase_order: {
+    id: number
+    document_number: string
+    order_date: string
+  } | null
   delivery_note_number: string | null
   is_tax_inclusive: boolean
   tax_in_cost: boolean
@@ -80,6 +85,10 @@ export interface GoodsReceiptProductOption {
 export interface GoodsReceiptOptions {
   suppliers: Array<{ id: number; name: string; code: string | null }>
   warehouses: Array<{ id: number; name: string; code: string | null }>
+  orders?: Array<{ id: number; document_number: string; supplier_id: number; warehouse_id: number; order_date: string }>
+  settings?: {
+    require_po?: boolean
+  }
 }
 
 export interface GoodsReceiptItemPayload {
@@ -91,9 +100,11 @@ export interface GoodsReceiptItemPayload {
   discount_value: number
   tax_rate: number | null
   notes: string | null
+  purchase_order_item_id?: number | null
 }
 
 export interface GoodsReceiptPayload {
+  purchase_order_id?: number | null
   supplier_id: number
   warehouse_id: number
   receipt_date: string

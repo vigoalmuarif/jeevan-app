@@ -4,6 +4,7 @@ import type {
   AuthMerchant,
   AuthSubrcription,
 } from "../types/auth.types";
+import { merchantService } from "@/modules/merchant/sevices/merchant.service";
 
 export const useMerchantStore = defineStore("merchant", {
   state: () => ({
@@ -24,9 +25,8 @@ export const useMerchantStore = defineStore("merchant", {
      * @example authStore.hasModule('sales')
      */
     hasModule: (state) => (moduleKey: string): boolean => {
-      return state.activeModules.includes(moduleKey)
+      return state.activeModules.includes(moduleKey);
     },
-    
   },
 
   actions: {
@@ -40,9 +40,27 @@ export const useMerchantStore = defineStore("merchant", {
       this.needsSetupWizard = payload.needsSetupWizard;
       this.merchant = payload.merchant;
       this.activeBranch = payload.activeBranch;
-      this.needsSetupWizard = payload.needsSetupWizard;
       this.subscription = payload.subscription;
       this.activeModules = payload.activeModules;
+    },
+
+    async fetchContext(merchantIdOrSlug: string | number) {
+      try {
+        const data = await merchantService.getContext(merchantIdOrSlug);
+        if (data?.merchant) {
+          this.merchant = {
+            ...(this.merchant as AuthMerchant),
+            ...data.merchant,
+          };
+        }
+        if (Array.isArray(data?.entitled_modules)) {
+          this.activeModules = data.entitled_modules;
+        }
+        return data;
+      } catch (err) {
+        console.error("Failed to fetch merchant context", err);
+        throw err;
+      }
     },
 
     clear(): void {

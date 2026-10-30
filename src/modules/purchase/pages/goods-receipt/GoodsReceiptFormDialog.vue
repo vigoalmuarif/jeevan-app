@@ -3,18 +3,21 @@ import { computed, reactive, ref, watch } from 'vue'
 import { Add01Icon, Delete03Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ComboboxSelect from '@/components/ui/combobox/ComboboxSelect.vue'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import MoneyInput from '@/components/ui/input-group/MoneyInput.vue'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import ServerComboBox from '@/components/server-combobox/ServerComboBox.vue'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import Spinner from '@/components/ui/spinner/Spinner.vue'
 import { normalizeError } from '@/lib/errors'
 import type { ComboboxFetcher } from '@/core/composables/useComboBox'
+import { toast } from 'vue-sonner'
 import { goodsReceiptService } from '../../services/goods-receipt.service'
+import { purchaseOrderService } from '../../services/purchase-order.service'
 import type {
   GoodsReceipt,
   GoodsReceiptItemPayload,
@@ -25,11 +28,16 @@ import type {
 } from '../../types/goods-receipt.types'
 
 const open = defineModel<boolean>('open', { default: false })
-const props = defineProps<{ selectedReceipt?: GoodsReceiptListItem; options: GoodsReceiptOptions }>()
+const props = defineProps<{
+  selectedReceipt?: GoodsReceiptListItem
+  options: GoodsReceiptOptions
+  initialPurchaseOrderId?: string
+}>()
 const emit = defineEmits<{ saved: [receipt: GoodsReceipt] }>()
 
 type DraftItem = {
   selection: string | null
+  purchase_order_item_id?: number | null
   product_variant_id: number | null
   unit_id: number | null
   unit_quantity: number | string
@@ -40,6 +48,7 @@ type DraftItem = {
   notes: string
 }
 type Draft = {
+  purchase_order_id: string
   supplier_id: string
   warehouse_id: string
   receipt_date: string
@@ -52,13 +61,28 @@ type Draft = {
 }
 
 const emptyItem = (): DraftItem => ({
-  selection: '', product_variant_id: null, unit_id: null, unit_quantity: '', unit_price: 0,
-  discount_type: '', discount_value: 0, tax_rate: '', notes: '',
+  selection: '',
+  purchase_order_item_id: null,
+  product_variant_id: null,
+  unit_id: null,
+  unit_quantity: '',
+  unit_price: 0,
+  discount_type: '',
+  discount_value: 0,
+  tax_rate: '',
+  notes: '',
 })
 const initialDraft = (): Draft => ({
-  supplier_id: '', warehouse_id: '', receipt_date: new Date().toISOString().slice(0, 10),
-  delivery_note_number: '', is_tax_inclusive: false, discount_type: '', discount_value: 0,
-  notes: '', items: [emptyItem()],
+  purchase_order_id: '',
+  supplier_id: '',
+  warehouse_id: '',
+  receipt_date: new Date().toISOString().slice(0, 10),
+  delivery_note_number: '',
+  is_tax_inclusive: false,
+  discount_type: '',
+  discount_value: 0,
+  notes: '',
+  items: [emptyItem()],
 })
 const form = reactive<Draft>(initialDraft())
 const selectedProductOptions = reactive<Record<string, GoodsReceiptProductOption>>({})
@@ -70,6 +94,35 @@ const generalError = ref('')
 const isEdit = computed(() => !!props.selectedReceipt)
 const currencyFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
 const numberFormat = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 4 })
+const purchaseOrderOptions = computed(() => [
+  ...(!props.options.settings?.require_po ? [{ value: 'none', label: 'Tanpa Purchase Order (Penerimaan Langsung)' }] : []),
+  ...(props.options.orders ?? []).map(order => ({
+    value: String(order.id),
+    label: `PO ${order.document_number} (${order.order_date})`,
+  })),
+])
+const selectedPurchaseOrder = computed(() => {
+  const orderId = Number(form.purchase_order_id)
+  return (props.options.orders ?? []).find(order => order.id === orderId)
+})
+const supplierOptions = computed(() => props.options.suppliers.map(supplier => ({
+  value: String(supplier.id),
+  label: `${supplier.name}${supplier.code ? ` (${supplier.code})` : ''}`,
+})))
+const warehouseOptions = computed(() => props.options.warehouses.map(warehouse => ({
+  value: String(warehouse.id),
+  label: `${warehouse.name}${warehouse.code ? ` (${warehouse.code})` : ''}`,
+})))
+const discountOptions = [
+  { value: 'none', label: 'Tanpa diskon' },
+  { value: 'percent', label: 'Persentase (%)' },
+  { value: 'amount', label: 'Nominal (Rp)' },
+]
+const itemDiscountOptions = [
+  { value: 'none', label: '—' },
+  { value: 'percent', label: '%' },
+  { value: 'amount', label: 'Rp' },
+]
 const fetchProductUnits: ComboboxFetcher = (search, params, requestOptions) =>
   goodsReceiptService.searchProductUnits(search, {
     ...params,
@@ -85,6 +138,12 @@ function setItemDiscountType(item: DraftItem, value: unknown) {
 
 function findOption(selection: string | null) {
   return selection ? selectedProductOptions[selection] : undefined
+}
+function unitOptions(item: DraftItem) {
+  return (findOption(item.selection)?.units ?? []).map(unit => ({
+    value: String(unit.unit_id),
+    label: `${unit.unit_name} (${unit.unit_code})`,
+  }))
 }
 function setSelectedOption(item: DraftItem, option: GoodsReceiptProductOption | null) {
   if (!option) {
@@ -189,6 +248,7 @@ async function fetchReceipt() {
       selectedProductOptions[selection] = option
       return {
         selection,
+        purchase_order_item_id: (item as any).purchase_order_item_id ?? null,
         product_variant_id: item.product_variant_id,
         unit_id: item.unit_id,
         unit_quantity: Number(item.unit_quantity),
@@ -200,6 +260,7 @@ async function fetchReceipt() {
       }
     })
     Object.assign(form, {
+      purchase_order_id: receipt.purchase_order_id ? String(receipt.purchase_order_id) : '',
       supplier_id: String(receipt.supplier_id),
       warehouse_id: String(receipt.warehouse_id),
       receipt_date: receipt.receipt_date.slice(0, 10),
@@ -218,10 +279,73 @@ async function fetchReceipt() {
   }
 }
 
+async function onSelectPurchaseOrder(value: unknown) {
+  const orderId = value === 'none' ? '' : String(value ?? '')
+  form.purchase_order_id = orderId
+  if (!orderId) return
+
+  loadingFetch.value = true
+  try {
+    const po = await purchaseOrderService.show(Number(orderId))
+    form.supplier_id = String(po.supplier_id)
+    form.warehouse_id = String(po.warehouse_id)
+    form.is_tax_inclusive = po.is_tax_inclusive
+
+    const openItems = po.items.filter(item => Number(item.remaining_base_quantity) > 0)
+    if (openItems.length > 0) {
+      form.items = openItems.map(item => {
+        const selection = String(item.product_variant_id)
+        const option: GoodsReceiptProductOption = {
+          selection,
+          label: `${item.product_name ?? 'Produk'}${item.variant_name ? ` / ${item.variant_name}` : ''} · SKU ${item.sku ?? '-'}`,
+          product_id: 0,
+          product_name: item.product_name ?? '',
+          product_variant_id: item.product_variant_id,
+          variant_name: item.variant_name ?? null,
+          sku: item.sku ?? '',
+          units: [
+            {
+              unit_id: item.unit_id,
+              unit_name: item.unit_name ?? '',
+              unit_code: item.unit_code ?? '',
+              conversion_rate: item.conversion_rate,
+              is_base: false,
+              unit_cost: item.unit_price,
+            },
+          ],
+          tax_rate: Number(item.tax_rate),
+        }
+        selectedProductOptions[selection] = option
+
+        return {
+          selection,
+          purchase_order_item_id: item.id,
+          product_variant_id: item.product_variant_id,
+          unit_id: item.unit_id,
+          unit_quantity: Number(item.remaining_unit_quantity),
+          unit_price: Number(item.unit_price),
+          discount_type: (item.discount_type as any) ?? '',
+          discount_value: Number(item.discount_value),
+          tax_rate: Number(item.tax_rate),
+          notes: item.notes ?? '',
+        }
+      })
+    }
+  } catch (err) {
+    toast.error(normalizeError(err).message)
+  } finally {
+    loadingFetch.value = false
+  }
+}
+
 watch(open, async isOpen => {
   if (!isOpen) return
   resetForm()
-  await fetchReceipt()
+  if (props.selectedReceipt) {
+    await fetchReceipt()
+  } else if (props.initialPurchaseOrderId) {
+    await onSelectPurchaseOrder(props.initialPurchaseOrderId)
+  }
 })
 
 async function handleSubmit() {
@@ -232,6 +356,7 @@ async function handleSubmit() {
     return
   }
   const payload: GoodsReceiptPayload = {
+    purchase_order_id: form.purchase_order_id ? Number(form.purchase_order_id) : null,
     supplier_id: Number(form.supplier_id),
     warehouse_id: Number(form.warehouse_id),
     receipt_date: form.receipt_date,
@@ -241,6 +366,7 @@ async function handleSubmit() {
     discount_value: Number(form.discount_value) || 0,
     notes: form.notes.trim() || null,
     items: form.items.map(item => ({
+      purchase_order_item_id: item.purchase_order_item_id ? Number(item.purchase_order_item_id) : null,
       product_variant_id: Number(item.product_variant_id),
       unit_id: Number(item.unit_id),
       unit_quantity: Number(item.unit_quantity),
@@ -284,22 +410,56 @@ async function handleSubmit() {
             <AlertTitle>Penerimaan belum tersimpan</AlertTitle>
             <AlertDescription>{{ generalError }}</AlertDescription>
           </Alert>
+          <Alert v-if="selectedPurchaseOrder" class="border-primary/30 bg-primary/5">
+            <AlertTitle>Penerimaan berasal dari Purchase Order</AlertTitle>
+            <AlertDescription class="flex flex-wrap items-center gap-2">
+              <span>Referensi PO:</span>
+              <Badge variant="outline">{{ selectedPurchaseOrder.document_number }}</Badge>
+            </AlertDescription>
+          </Alert>
           <div v-if="loadingFetch" class="flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Memuat draft...</div>
           <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field class="gap-1.5 sm:col-span-2 lg:col-span-4">
+              <FieldLabel for="gr-po">
+                Rujukan Purchase Order (PO)
+                <span v-if="options.settings?.require_po" class="text-xs font-semibold text-destructive">
+                  * Wajib (Pengaturan merchant mewajibkan PO)
+                </span>
+                <span v-else class="text-xs font-normal text-muted-foreground">
+                  (Opsional · Otomatis mengisi supplier, gudang & sisa barang)
+                </span>
+              </FieldLabel>
+              <ComboboxSelect
+                :model-value="form.purchase_order_id || 'none'"
+                :options="purchaseOrderOptions"
+                placeholder="Pilih Purchase Order..."
+                search-placeholder="Cari nomor PO..."
+                :disabled="loading || isEdit"
+                @update:model-value="onSelectPurchaseOrder"
+              />
+              <FieldError v-if="errors.purchase_order_id">{{ errors.purchase_order_id }}</FieldError>
+            </Field>
+
             <Field class="gap-1.5">
               <FieldLabel for="gr-supplier">Supplier</FieldLabel>
-              <Select v-model="form.supplier_id" :disabled="loading">
-                <SelectTrigger id="gr-supplier"><SelectValue placeholder="Pilih supplier" /></SelectTrigger>
-                <SelectContent><SelectItem v-for="supplier in options.suppliers" :key="supplier.id" :value="String(supplier.id)">{{ supplier.name }}</SelectItem></SelectContent>
-              </Select>
+              <ComboboxSelect
+                v-model="form.supplier_id"
+                :options="supplierOptions"
+                placeholder="Pilih supplier"
+                search-placeholder="Cari supplier..."
+                :disabled="loading"
+              />
               <FieldError v-if="errors.supplier_id">{{ errors.supplier_id }}</FieldError>
             </Field>
             <Field class="gap-1.5">
               <FieldLabel for="gr-warehouse">Gudang</FieldLabel>
-              <Select v-model="form.warehouse_id" :disabled="loading">
-                <SelectTrigger id="gr-warehouse"><SelectValue placeholder="Pilih gudang" /></SelectTrigger>
-                <SelectContent><SelectItem v-for="warehouse in options.warehouses" :key="warehouse.id" :value="String(warehouse.id)">{{ warehouse.name }}</SelectItem></SelectContent>
-              </Select>
+              <ComboboxSelect
+                v-model="form.warehouse_id"
+                :options="warehouseOptions"
+                placeholder="Pilih gudang"
+                search-placeholder="Cari gudang..."
+                :disabled="loading"
+              />
               <FieldError v-if="errors.warehouse_id">{{ errors.warehouse_id }}</FieldError>
             </Field>
             <Field class="gap-1.5">
@@ -314,10 +474,14 @@ async function handleSubmit() {
             <Field class="gap-1.5 sm:col-span-2">
               <FieldLabel for="gr-discount-type">Diskon dokumen</FieldLabel>
               <div class="flex gap-2">
-                <Select :model-value="form.discount_type" @update:model-value="setHeaderDiscountType">
-                  <SelectTrigger id="gr-discount-type" class="w-36"><SelectValue placeholder="Tanpa diskon" /></SelectTrigger>
-                  <SelectContent><SelectItem value="percent">Persen</SelectItem><SelectItem value="amount">Nominal</SelectItem></SelectContent>
-                </Select>
+                <ComboboxSelect
+                  :model-value="form.discount_type || 'none'"
+                  :options="discountOptions"
+                  placeholder="Tanpa diskon"
+                  search-placeholder="Cari jenis diskon..."
+                  class="w-36"
+                  @update:model-value="setHeaderDiscountType"
+                />
                 <MoneyInput
                   v-if="form.discount_type === 'amount'"
                   v-model="form.discount_value"
@@ -383,16 +547,14 @@ async function handleSubmit() {
                 <div class="grid min-w-0 gap-3 sm:grid-cols-2">
                   <Field class="min-w-0">
                     <FieldLabel>Satuan</FieldLabel>
-                    <Select
+                    <ComboboxSelect
                       :model-value="item.unit_id === null ? '' : String(item.unit_id)"
+                      :options="unitOptions(item)"
+                      placeholder="Pilih satuan"
+                      search-placeholder="Cari satuan..."
                       :disabled="loading || !findOption(item.selection)?.units.length"
                       @update:model-value="setSelectedUnit(item, $event)"
-                    >
-                      <SelectTrigger class="w-full min-w-0"><SelectValue placeholder="Pilih satuan" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem v-for="unit in findOption(item.selection)?.units ?? []" :key="unit.unit_id" :value="String(unit.unit_id)">{{ unit.unit_name }} ({{ unit.unit_code }}) · 1 = {{ numberFormat.format(Number(unit.conversion_rate)) }} dasar</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                     <FieldError v-if="errors[`items.${index}.unit_id`]">{{ errors[`items.${index}.unit_id`] }}</FieldError>
                   </Field>
                   <Field class="min-w-0">
@@ -411,10 +573,14 @@ async function handleSubmit() {
                   <Field class="min-w-0">
                     <FieldLabel>Diskon</FieldLabel>
                     <div class="flex min-w-0 gap-1">
-                      <Select :model-value="item.discount_type" @update:model-value="setItemDiscountType(item, $event)">
-                        <SelectTrigger class="w-20 shrink-0"><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent><SelectItem value="percent">%</SelectItem><SelectItem value="amount">Rp</SelectItem></SelectContent>
-                      </Select>
+                      <ComboboxSelect
+                        :model-value="item.discount_type || 'none'"
+                        :options="itemDiscountOptions"
+                        placeholder="—"
+                        search-placeholder="Cari diskon..."
+                        class="w-20 shrink-0"
+                        @update:model-value="setItemDiscountType(item, $event)"
+                      />
                       <MoneyInput v-if="item.discount_type === 'amount'" v-model="item.discount_value" class="min-w-0" :disabled="loading" />
                       <Input v-else v-model.number="item.discount_value" type="number" min="0" step="1" :disabled="!item.discount_type || loading" />
                     </div>
@@ -463,14 +629,14 @@ async function handleSubmit() {
                       <FieldError v-if="itemError(index)">{{ itemError(index) }}</FieldError>
                     </td>
                     <td class="min-w-40 p-2">
-                      <Select
+                      <ComboboxSelect
                         :model-value="item.unit_id === null ? '' : String(item.unit_id)"
+                        :options="unitOptions(item)"
+                        placeholder="Pilih satuan"
+                        search-placeholder="Cari satuan..."
                         :disabled="loading || !findOption(item.selection)?.units.length"
                         @update:model-value="setSelectedUnit(item, $event)"
-                      >
-                        <SelectTrigger class="w-full"><SelectValue placeholder="Pilih satuan" /></SelectTrigger>
-                        <SelectContent><SelectItem v-for="unit in findOption(item.selection)?.units ?? []" :key="unit.unit_id" :value="String(unit.unit_id)">{{ unit.unit_name }} ({{ unit.unit_code }})</SelectItem></SelectContent>
-                      </Select>
+                      />
                       <p v-if="findOption(item.selection)" class="mt-1 text-xs text-muted-foreground">1 {{ findOption(item.selection)?.units.find(unit => unit.unit_id === item.unit_id)?.unit_code }} = {{ numberFormat.format(Number(findOption(item.selection)?.units.find(unit => unit.unit_id === item.unit_id)?.conversion_rate)) }} satuan dasar</p>
                     </td>
                     <td class="w-28 p-2"><Input v-model.number="item.unit_quantity" type="number" min="0" step="1" placeholder="0" :disabled="loading" /><FieldError v-if="errors[`items.${index}.unit_quantity`]">{{ errors[`items.${index}.unit_quantity`] }}</FieldError></td>
@@ -479,7 +645,14 @@ async function handleSubmit() {
                       <FieldError v-if="errors[`items.${index}.unit_price`]">{{ errors[`items.${index}.unit_price`] }}</FieldError>
                     </td>
                     <td class="w-48 p-2"><div class="flex gap-1">
-                      <Select :model-value="item.discount_type" @update:model-value="setItemDiscountType(item, $event)"><SelectTrigger class="w-24"><SelectValue placeholder="—" /></SelectTrigger><SelectContent><SelectItem value="percent">%</SelectItem><SelectItem value="amount">Rp</SelectItem></SelectContent></Select>
+                      <ComboboxSelect
+                        :model-value="item.discount_type || 'none'"
+                        :options="itemDiscountOptions"
+                        placeholder="—"
+                        search-placeholder="Cari diskon..."
+                        class="w-24"
+                        @update:model-value="setItemDiscountType(item, $event)"
+                      />
                       <MoneyInput
                         v-if="item.discount_type === 'amount'"
                         v-model="item.discount_value"

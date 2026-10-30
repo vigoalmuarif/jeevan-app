@@ -7,6 +7,34 @@ export const purchaseMenu: MenuNode = {
   module: 'purchase',
   children: [
     {
+      key: 'purchase.requests',
+      label: 'Purchase Request',
+      icon: 'FileText',
+      routeName: 'purchase.requests.index',
+      permission: 'purchase.request.view',
+    },
+    {
+      key: 'purchase.orders',
+      label: 'Purchase Order',
+      icon: 'ShoppingBag01Icon',
+      routeName: 'purchase.orders.index',
+      permission: 'purchase.order.view',
+    },
+    {
+      key: 'purchase.goods-receipts',
+      label: 'Penerimaan Barang',
+      icon: 'PackageCheck',
+      routeName: 'purchase.goods-receipts.index',
+      permission: 'purchase.receipt.view',
+    },
+    {
+      key: 'purchase.returns',
+      label: 'Retur Pembelian',
+      icon: 'RotateCcw',
+      routeName: 'purchase.returns.index',
+      permission: 'purchase.return.view',
+    },
+    {
       key: 'purchase.invoices',
       label: 'Faktur Pembelian',
       icon: 'ReceiptText',
@@ -19,13 +47,6 @@ export const purchaseMenu: MenuNode = {
       icon: 'CreditCard',
       routeName: 'purchase.payments.index',
       permission: 'purchase.payment.view',
-    },
-    {
-      key: 'purchase.goods-receipts',
-      label: 'Penerimaan Barang',
-      icon: 'PackageCheck',
-      routeName: 'purchase.goods-receipts.index',
-      permission: 'purchase.receipt.view',
     },
   ],
 }

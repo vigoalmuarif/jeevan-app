@@ -10,5 +10,5 @@ export const warehouseStockColumns: ColumnDef<WarehouseStockListItem, any>[] = [
   plainColumn<WarehouseStockListItem>('sku', 'SKU', row => row.sku),
   plainColumn<WarehouseStockListItem>('branch_name', 'Cabang', row => row.branch_name),
   plainColumn<WarehouseStockListItem>('warehouse_name', 'Gudang', row => row.warehouse_name),
-  plainColumn<WarehouseStockListItem>('quantity', 'Stok', row => quantityFormat.format(Number(row.quantity) || 0)),
+  plainColumn<WarehouseStockListItem>('quantity', 'Stok', row => `${quantityFormat.format(Number(row.quantity) || 0)} ${row.base_unit_code || row.base_unit_name}`.trim()),
 ]
